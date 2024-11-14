@@ -7,14 +7,27 @@ adding a new "isDone" field as a boolean. The authorization rule below
 specifies that any user authenticated via an API key can "create", "read",
 "update", and "delete" any "Todo" records.
 =========================================================================*/
+
+// Define the enum values
+const StatusEnum = a.enum(["todo", "in-progress", "done"]);
+const PriorityEnum: a.enum(['Low', 'Medium', 'High']);
+
 const schema = a.schema({
 	Todo: a
 		.model({
 			content: a.string(),
 			title: a.string(),
 			description: a.string(),
+      status: StatusEnum.default('todo'), 
+      priority: PriorityEnum.default('Medium'), 
+			dueDate: a.datetime(),
+			estimatedEffort: a.float(),
+			actualEffort: a.float(),
+			tags: a.string().array(),
+			position: a.integer(),
+			assigneeId: a.string(),
 		})
-		.authorization((allow) => [allow.publicApiKey()]),
+		.authorization((allow) => [allow.publicApiKey().to(["read"]), allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
