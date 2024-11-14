@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
 /*== STEP 1 ===============================================================
@@ -7,24 +8,39 @@ specifies that any user authenticated via an API key can "create", "read",
 "update", and "delete" any "Todo" records.
 =========================================================================*/
 const schema = a.schema({
-  Todo: a
-    .model({
-      content: a.string(),
-    })
-    .authorization((allow) => [allow.publicApiKey()]),
+	Todo: a
+		.model({
+			id: a.id(),
+			title: a.string(),
+			description: a.string(),
+			status: a.enum(["todo", "in-progress", "done"]).default("todo"),
+			priority: a.enum(["Low", "Medium", "High"]).default("Medium"),
+			dueDate: a.datetime(),
+			addDate: a.datetime(),
+			estimatedEffort: a.float().optional(),
+			actualEffort: a.float().optional(),
+			tags: a.string().array().optional(),
+			position: a.integer(),
+			assigneeId: a.string().optional(),
+			assignee: a.belongsTo("User", { targetName: "assigneeId", indexName: "byAssignee" }),
+			createdAt: a.datetime(),
+			updatedAt: a.datetime(),
+			content: a.string(),
+		})
+		.authorization((allow) => [allow.publicApiKey()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
 
 export const data = defineData({
-  schema,
-  authorizationModes: {
-    defaultAuthorizationMode: "apiKey",
-    // API Key is used for a.allow.public() rules
-    apiKeyAuthorizationMode: {
-      expiresInDays: 30,
-    },
-  },
+	schema,
+	authorizationModes: {
+		defaultAuthorizationMode: "apiKey",
+		// API Key is used for a.allow.public() rules
+		apiKeyAuthorizationMode: {
+			expiresInDays: 30,
+		},
+	},
 });
 
 /*== STEP 2 ===============================================================
