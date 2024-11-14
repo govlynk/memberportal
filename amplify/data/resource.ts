@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
 /*== STEP 1 ===============================================================
@@ -9,25 +8,103 @@ specifies that any user authenticated via an API key can "create", "read",
 =========================================================================*/
 
 // Define the enum values
-const StatusEnum = a.enum(["todo", "in-progress", "done"]);
-const PriorityEnum: a.enum(['Low', 'Medium', 'High']);
 
 const schema = a.schema({
+	User: a
+		.model({
+			cognitoId: a.string(),
+			email: a.email(),
+			name: a.string(),
+			phone: a.string(),
+			status: a.enum(["ACTIVE", "INACTIVE"]),
+			lastLogin: a.datetime(),
+			companies: a.hasMany("UserCompanyRole", "companyId"),
+			assignedTodos: a.hasMany("Todo", "AssigneeId"),
+		})
+		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+
+	Company: a
+		.model({
+			legalBusinessName: a.string(),
+			dbaName: a.string(),
+			uei: a.string(),
+			cageCode: a.string(),
+			ein: a.string(),
+			companyEmail: a.email(),
+			companyPhoneNumber: a.string(),
+			companyWebsite: a.url(),
+			status: a.enum(["ACTIVE", "INACTIVE", "PENDING"]),
+			users: a.hasMany("UserCompanyRole", "companyId"),
+			teams: a.hasMany("Team", "companyID"),
+		})
+		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+
+	Role: a
+		.model({
+			name: a.string(),
+			description: a.string(),
+			users: a.hasMany("UserCompanyRole", "userId"),
+		})
+		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+
+	UserCompanyRole: a
+		.model({
+			userId: a.string(),
+			companyId: a.string(),
+			roleId: a.string(),
+			user: a.belongsTo("User", "userId"),
+			company: a.belongsTo("Company", "companyId"),
+			role: a.belongsTo("Role", "roleId"),
+			status: a.enum(["ACTIVE", "INACTIVE"]),
+		})
+		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+
+	Team: a
+		.model({
+			companyID: a.string(),
+			contactID: a.string(),
+			role: a.string(),
+			contact: a.hasOne("Contact", "contactID"),
+			company: a.belongsTo("Company", "companyID"),
+		})
+		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+
+	Contact: a
+		.model({
+			firstName: a.string(),
+			lastName: a.string(),
+			title: a.string(),
+			department: a.string(),
+			contactEmail: a.email(),
+			contactMobilePhone: a.string(),
+			contactBusinessPhone: a.string(),
+			workAddressStreetLine1: a.string(),
+			workAddressStreetLine2: a.string(),
+			workAddressCity: a.string(),
+			workAddressStateCode: a.string(),
+			workAddressZipCode: a.string(),
+			workAddressCountryCode: a.string(),
+			dateLastContacted: a.datetime(),
+			notes: a.string(),
+		})
+		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+
 	Todo: a
 		.model({
 			content: a.string(),
 			title: a.string(),
 			description: a.string(),
-      status: StatusEnum.default('todo'), 
-      priority: PriorityEnum.default('Medium'), 
 			dueDate: a.datetime(),
 			estimatedEffort: a.float(),
 			actualEffort: a.float(),
 			tags: a.string().array(),
 			position: a.integer(),
 			assigneeId: a.string(),
+			assignee: a.belongsTo("User", "assigneeId"),
+			priority: a.enum(["LOW", "MEDIUM", "HIGH"]),
+			progress: a.enum(["TODO", "DOING", "DONE"]),
 		})
-		.authorization((allow) => [allow.publicApiKey().to(["read"]), allow.owner()]),
+		.authorization((allow) => [allow.publicApiKey()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -35,39 +112,15 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
 	schema,
 	authorizationModes: {
-		defaultAuthorizationMode: "apiKey",
-		// API Key is used for a.allow.public() rules
+		defaultAuthorizationMode: "userPool",
 		apiKeyAuthorizationMode: {
 			expiresInDays: 30,
 		},
+		iamAuthorizationMode: {
+			roleNames: ["adminRole", "readOnlyRole"],
+		},
+		userPoolAuthorizationMode: {
+			groupNames: ["Admin", "CompanyAdmin", "User"],
+		},
 	},
 });
-
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
-=========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>
