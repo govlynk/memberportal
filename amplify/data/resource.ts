@@ -10,22 +10,9 @@ specifies that any user authenticated via an API key can "create", "read",
 const schema = a.schema({
 	Todo: a
 		.model({
-			id: a.id(),
+			content: a.string(),
 			title: a.string(),
 			description: a.string(),
-			status: a.enum(["todo", "in-progress", "done"]).default("todo"),
-			priority: a.enum(["Low", "Medium", "High"]).default("Medium"),
-			dueDate: a.datetime(),
-			addDate: a.datetime(),
-			estimatedEffort: a.float().optional(),
-			actualEffort: a.float().optional(),
-			tags: a.string().array().optional(),
-			position: a.integer(),
-			// assigneeId: a.string().optional(),
-			// assignee: a.belongsTo("User", { targetName: "assigneeId", indexName: "byAssignee" }),
-			createdAt: a.datetime(),
-			updatedAt: a.datetime(),
-			content: a.string(),
 		})
 		.authorization((allow) => [allow.publicApiKey()]),
 });
