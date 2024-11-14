@@ -1,33 +1,24 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any user authenticated via an API key can "create", "read",
-"update", and "delete" any "Todo" records.
-=========================================================================*/
-
-// Define the enum values
-
 const schema = a.schema({
 	User: a
 		.model({
-			cognitoId: a.string(),
-			email: a.email(),
-			name: a.string(),
+			cognitoId: a.string().required(),
+			email: a.email().required(),
+			name: a.string().required(),
 			phone: a.string(),
 			status: a.enum(["ACTIVE", "INACTIVE"]),
 			lastLogin: a.datetime(),
-			companies: a.hasMany("UserCompanyRole", "companyId"),
-			assignedTodos: a.hasMany("Todo", "AssigneeId"),
+			companies: a.hasMany("UserCompanyRole", "userId"),
+			todos: a.hasMany("Todo", "assigneeId"),
 		})
-		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
 
 	Company: a
 		.model({
-			legalBusinessName: a.string(),
+			legalBusinessName: a.string().required(),
 			dbaName: a.string(),
-			uei: a.string(),
+			uei: a.string().required(),
 			cageCode: a.string(),
 			ein: a.string(),
 			companyEmail: a.email(),
@@ -35,44 +26,45 @@ const schema = a.schema({
 			companyWebsite: a.url(),
 			status: a.enum(["ACTIVE", "INACTIVE", "PENDING"]),
 			users: a.hasMany("UserCompanyRole", "companyId"),
-			teams: a.hasMany("Team", "companyID"),
+			teams: a.hasMany("Team", "companyId"),
 		})
-		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
 
 	Role: a
 		.model({
-			name: a.string(),
+			name: a.string().required(),
 			description: a.string(),
-			users: a.hasMany("UserCompanyRole", "userId"),
+			permissions: a.string().array(),
+			userCompanyRoles: a.hasMany("UserCompanyRole", "roleId"),
 		})
-		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+		.authorization((allow) => [allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
 
 	UserCompanyRole: a
 		.model({
-			userId: a.string(),
-			companyId: a.string(),
-			roleId: a.string(),
+			userId: a.string().required(),
+			companyId: a.string().required(),
+			roleId: a.string().required(),
 			user: a.belongsTo("User", "userId"),
 			company: a.belongsTo("Company", "companyId"),
 			role: a.belongsTo("Role", "roleId"),
 			status: a.enum(["ACTIVE", "INACTIVE"]),
 		})
-		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
 
 	Team: a
 		.model({
-			companyID: a.string(),
-			contactID: a.string(),
-			role: a.string(),
-			contact: a.hasOne("Contact", "contactID"),
-			company: a.belongsTo("Company", "companyID"),
+			companyId: a.string().required(),
+			contactId: a.string().required(),
+			role: a.string().required(),
+			company: a.belongsTo("Company", "companyId"),
+			contact: a.belongsTo("Contact", "contactId"),
 		})
-		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
 
 	Contact: a
 		.model({
-			firstName: a.string(),
-			lastName: a.string(),
+			firstName: a.string().required(),
+			lastName: a.string().required(),
 			title: a.string(),
 			department: a.string(),
 			contactEmail: a.email(),
@@ -86,25 +78,25 @@ const schema = a.schema({
 			workAddressCountryCode: a.string(),
 			dateLastContacted: a.datetime(),
 			notes: a.string(),
+			teams: a.hasMany("Team", "contactId"),
 		})
-		.authorization((allow) => [allow.publicApiKey(), allow.owner().to(["read"]), allow.groups(["Admin"])]),
+		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
 
 	Todo: a
 		.model({
-			content: a.string(),
-			title: a.string(),
-			description: a.string(),
-			dueDate: a.datetime(),
+			title: a.string().required(),
+			description: a.string().required(),
+			status: a.enum(["TODO", "DOING", "DONE"]),
+			priority: a.enum(["LOW", "MEDIUM", "HIGH"]),
+			dueDate: a.datetime().required(),
 			estimatedEffort: a.float(),
 			actualEffort: a.float(),
 			tags: a.string().array(),
-			position: a.integer(),
+			position: a.integer().required(),
 			assigneeId: a.string(),
 			assignee: a.belongsTo("User", "assigneeId"),
-			priority: a.enum(["LOW", "MEDIUM", "HIGH"]),
-			progress: a.enum(["TODO", "DOING", "DONE"]),
 		})
-		.authorization((allow) => [allow.publicApiKey()]),
+		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -115,12 +107,6 @@ export const data = defineData({
 		defaultAuthorizationMode: "userPool",
 		apiKeyAuthorizationMode: {
 			expiresInDays: 30,
-		},
-		iamAuthorizationMode: {
-			roleNames: ["adminRole", "readOnlyRole"],
-		},
-		userPoolAuthorizationMode: {
-			groupNames: ["Admin", "CompanyAdmin", "User"],
 		},
 	},
 });
