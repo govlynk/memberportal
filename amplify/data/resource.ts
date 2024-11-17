@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
+import { type DefaultAuthorizationMode } from "@aws-amplify/backend-data";
 
 const schema = a.schema({
 	User: a
@@ -12,7 +13,11 @@ const schema = a.schema({
 			companies: a.hasMany("UserCompanyRole", "userId"),
 			todos: a.hasMany("Todo", "assigneeId"),
 		})
-		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
+		.authorization((allow) => [
+			allow.owner(),
+			allow.public().to(["read"]),
+			allow.group("Admin").to(["create", "read", "update", "delete"]),
+		]),
 
 	Company: a
 		.model({
@@ -28,7 +33,11 @@ const schema = a.schema({
 			users: a.hasMany("UserCompanyRole", "companyId"),
 			teams: a.hasMany("Team", "companyId"),
 		})
-		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
+		.authorization((allow) => [
+			allow.owner(),
+			allow.public().to(["read"]),
+			allow.group("Admin").to(["create", "read", "update", "delete"]),
+		]),
 
 	Role: a
 		.model({
@@ -37,7 +46,10 @@ const schema = a.schema({
 			permissions: a.string().array(),
 			userCompanyRoles: a.hasMany("UserCompanyRole", "roleId"),
 		})
-		.authorization((allow) => [allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
+		.authorization((allow) => [
+			allow.group("Admin").to(["create", "read", "update", "delete"]),
+			allow.public().to(["read"]),
+		]),
 
 	UserCompanyRole: a
 		.model({
@@ -49,7 +61,7 @@ const schema = a.schema({
 			role: a.belongsTo("Role", "roleId"),
 			status: a.enum(["ACTIVE", "INACTIVE"]),
 		})
-		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
 	Team: a
 		.model({
@@ -59,7 +71,11 @@ const schema = a.schema({
 			company: a.belongsTo("Company", "companyId"),
 			contact: a.belongsTo("Contact", "contactId"),
 		})
-		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
+		.authorization((allow) => [
+			allow.owner(),
+			allow.public().to(["read"]),
+			allow.group("Admin").to(["create", "read", "update", "delete"]),
+		]),
 
 	Contact: a
 		.model({
@@ -80,7 +96,11 @@ const schema = a.schema({
 			notes: a.string(),
 			teams: a.hasMany("Team", "contactId"),
 		})
-		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
+		.authorization((allow) => [
+			allow.owner(),
+			allow.public().to(["read"]),
+			allow.group("Admin").to(["create", "read", "update", "delete"]),
+		]),
 
 	Todo: a
 		.model({
@@ -95,9 +115,12 @@ const schema = a.schema({
 			position: a.integer().required(),
 			assigneeId: a.string(),
 			assignee: a.belongsTo("User", "assigneeId"),
-			content: a.string(),
 		})
-		.authorization((allow) => [allow.owner(), allow.groups(["Admin"]).to(["read", "create", "update", "delete"])]),
+		.authorization((allow) => [
+			allow.owner(),
+			allow.public().to(["read"]),
+			allow.group("Admin").to(["create", "read", "update", "delete"]),
+		]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -105,7 +128,7 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
 	schema,
 	authorizationModes: {
-		defaultAuthorizationMode: "userPool",
+		defaultAuthorizationMode: "userPool" as DefaultAuthorizationMode,
 		apiKeyAuthorizationMode: {
 			expiresInDays: 30,
 		},
