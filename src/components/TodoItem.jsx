@@ -6,15 +6,15 @@ import { Trash2, GripVertical, Calendar, AlertCircle, Edit, Tag } from 'lucide-r
 import { useTodoStore } from '../stores/todoStore';
 
 const getPriorityColors = (mode) => ({
-  Low: { 
+  LOW: { 
     bgcolor: mode === 'dark' ? 'rgba(25, 118, 210, 0.15)' : 'primary.50',
     color: mode === 'dark' ? '#90caf9' : 'primary.main'
   },
-  Medium: {
+  MEDIUM: {
     bgcolor: mode === 'dark' ? 'rgba(237, 108, 2, 0.15)' : 'warning.50',
     color: mode === 'dark' ? '#ffb74d' : 'warning.main'
   },
-  High: {
+  HIGH: {
     bgcolor: mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : 'error.50',
     color: mode === 'dark' ? '#ef5350' : 'error.main'
   },

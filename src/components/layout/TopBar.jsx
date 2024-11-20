@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -9,13 +9,10 @@ import {
   Avatar,
   Menu,
   MenuItem,
-  useColorScheme,
 } from '@mui/material';
-import { Menu as MenuIcon, Sun, Moon, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { Menu as MenuIcon, LogOut } from 'lucide-react';
 
 export default function TopBar({ user, signOut }) {
-  const { mode, setMode } = useColorScheme();
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleMenu = (event) => {
@@ -31,10 +28,6 @@ export default function TopBar({ user, signOut }) {
     signOut();
   };
 
-  const toggleColorMode = () => {
-    setMode(mode === 'light' ? 'dark' : 'light');
-  };
-
   return (
     <AppBar 
       position="sticky" 
@@ -46,28 +39,15 @@ export default function TopBar({ user, signOut }) {
       }}
     >
       <Toolbar>
-        <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
-          <MenuIcon />
-        </IconButton>
-        
         <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: 'text.primary' }}>
-          GovLynk
+          Amplify Gen 2 Demo
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton
-            onClick={toggleColorMode}
-            color="inherit"
-            sx={{ color: 'text.primary' }}
-          >
-            {mode === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-          </IconButton>
-
           <Button
             onClick={handleMenu}
             startIcon={
               <Avatar
-                src="https://images.unsplash.com/photo-1633332755192-727a05c4013d"
                 sx={{ width: 32, height: 32 }}
               />
             }
@@ -75,12 +55,9 @@ export default function TopBar({ user, signOut }) {
             sx={{ 
               textTransform: 'none',
               color: 'text.primary',
-              '&:hover': {
-                bgcolor: 'action.hover'
-              }
             }}
           >
-            {user?.name || 'User'}
+            {user?.name || user?.username || 'User'}
           </Button>
 
           <Menu

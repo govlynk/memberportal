@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Amplify } from 'aws-amplify';
 import { Authenticator } from '@aws-amplify/ui-react';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 import '@aws-amplify/ui-react/styles.css';
@@ -15,8 +16,10 @@ if (!rootElement) throw new Error('Failed to find the root element');
 
 createRoot(rootElement).render(
   <StrictMode>
-    <Authenticator.Provider>
-      <App />
-    </Authenticator.Provider>
+    <BrowserRouter>
+      <Authenticator.Provider>
+        <App />
+      </Authenticator.Provider>
+    </BrowserRouter>
   </StrictMode>
 );

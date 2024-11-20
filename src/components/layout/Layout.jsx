@@ -1,47 +1,62 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Box } from '@mui/material';
-import Sidebar from './Sidebar';
-import TopBar from './TopBar';
-import TodoScreen from '../../screens/TodoScreen';
-import Default from '../../screens/Default';
-import CompanyScreen from '../../screens/CompanyScreen';
-import TeamScreen from '../../screens/TeamScreen';
-import UserScreen from '../../screens/UserScreen';
-import { useAuthStore } from '../../stores/authStore';
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import { Box, ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import Sidebar from "./Sidebar";
+import TopBar from "./TopBar";
+import TodoScreen from "../../screens/TodoScreen";
+import UserScreen from "../../screens/UserScreen";
+import { useAuthStore } from "../../stores/authStore";
 
-export function Layout() {
-  const user = useAuthStore((state) => state.user);
-  const signOut = useAuthStore((state) => state.reset);
+const theme = createTheme({
+	components: {
+		MuiDrawer: {
+			styleOverrides: {
+				paper: {
+					backgroundColor: "#f5f5f5",
+					borderRight: "1px solid rgba(0, 0, 0, 0.12)",
+				},
+			},
+		},
+	},
+});
 
-  return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <TopBar user={user} signOut={signOut} />
-        <Box component="main" sx={{ flex: 1, p: 3, bgcolor: 'background.default' }}>
-          <Routes>
-            <Route path="/" element={<Default />} />
-            <Route path="/dashboard" element={<Default />} />
-            <Route path="/welcome" element={<Default />} />
-            <Route path="/team" element={<TeamScreen />} />
-            <Route path="/company" element={<CompanyScreen />} />
-            <Route path="/users" element={<UserScreen />} />
-            <Route path="/contacts" element={<Default />} />
-            <Route path="/verify-sam" element={<Default />} />
-            <Route path="/opportunities" element={<Default />} />
-            <Route path="/pipeline" element={<Default />} />
-            <Route path="/awards" element={<Default />} />
-            <Route path="/invoices" element={<Default />} />
-            <Route path="/company-admin" element={<Default />} />
-            <Route path="/team-admin" element={<Default />} />
-            <Route path="/account-admin" element={<Default />} />
-            <Route path="/color-sections" element={<Default />} />
-            <Route path="/menu-manager" element={<Default />} />
-            <Route path="/todos" element={<TodoScreen />} />
-          </Routes>
-        </Box>
-      </Box>
-    </Box>
-  );
+const DRAWER_WIDTH = 280;
+
+export function Layout({ signOut }) {
+	const user = useAuthStore((state) => state.user);
+
+	return (
+		<ThemeProvider theme={theme}>
+			<CssBaseline />
+			<Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+				<Sidebar width={DRAWER_WIDTH} />
+				<Box
+					sx={{
+						flex: 1,
+						display: "flex",
+						flexDirection: "column",
+						overflow: "hidden",
+						width: `calc(100% - ${DRAWER_WIDTH}px)`,
+					}}
+				>
+					<TopBar user={user} signOut={signOut} />
+					<Box
+						component='main'
+						sx={{
+							flex: 1,
+							p: 3,
+							bgcolor: "background.default",
+							overflow: "auto",
+						}}
+					>
+						<Routes>
+							<Route path='/' element={<TodoScreen />} />
+							<Route path='/todos' element={<TodoScreen />} />
+							<Route path='/users' element={<UserScreen />} />
+						</Routes>
+					</Box>
+				</Box>
+			</Box>
+		</ThemeProvider>
+	);
 }
