@@ -98,22 +98,24 @@ export function TodoDialog({ open, onClose, editTodo = null }) {
 		}
 
 		const todoData = {
-			...formData,
 			title: formData.title.trim(),
 			description: formData.description.trim(),
 			tags: formData.tags || [],
 			estimatedEffort: parseFloat(formData.estimatedEffort) || 0,
 			actualEffort: parseFloat(formData.actualEffort) || 0,
 			dueDate: new Date(formData.dueDate).toISOString(),
-			status: "TODO",
-			priority: formData.priority || "MEDIUM",
+			status: "TODO", // Ensure uppercase
+			priority: formData.priority || "MEDIUM", // Ensure uppercase
+			position: formData.position || 0,
+			assigneeId: user?.sub || null,
 		};
 
 		try {
 			if (editTodo) {
 				await updateTodo(editTodo.id, todoData);
 			} else {
-				await addTodo(todoData);
+				const result = await addTodo(todoData);
+				console.log("New todo created:", result); // Add logging
 			}
 			onClose();
 		} catch (error) {

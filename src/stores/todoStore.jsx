@@ -34,18 +34,32 @@ export const useTodoStore = create((set) => ({
 	addTodo: async (todoData) => {
 		set({ loading: true });
 		try {
-			const result = await client.models.Todo.create({
-				...todoData,
-				status: "TODO",
-				priority: todoData.priority || "MEDIUM",
+			// Create todo matching the schema structure
+			const todo = await client.models.Todo.create({
+				title: todoData.title,
+				description: todoData.description,
+				status: "TODO", // Enum value must match schema
+				priority: todoData.priority || "MEDIUM", // Enum value must match schema
+				dueDate: todoData.dueDate,
+				estimatedEffort: todoData.estimatedEffort || 0,
+				actualEffort: todoData.actualEffort || 0,
+				tags: todoData.tags || [],
 				position: todoData.position || 0,
-				dueDate: todoData.dueDate || new Date().toISOString(),
+				assigneeId: todoData.assigneeId,
 			});
-			set({ loading: false });
-			return result;
+
+			// Update local state with new todo
+			set((state) => ({
+				todos: [...state.todos, todo],
+				loading: false,
+				error: null,
+			}));
+
+			console.log("Todo created successfully:", todo);
+			return todo;
 		} catch (err) {
 			console.error("Create todo error:", err);
-			set({ error: "Failed to create todo", loading: false });
+			set({ error: err.message || "Failed to create todo", loading: false });
 			throw err;
 		}
 	},

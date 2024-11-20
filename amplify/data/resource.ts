@@ -89,7 +89,7 @@ const schema = a.schema({
 			description: a.string().required(),
 			status: a.enum(["TODO", "DOING", "DONE"]),
 			priority: a.enum(["LOW", "MEDIUM", "HIGH"]),
-			dueDate: a.datetime().required(),
+			dueDate: a.datetime(),
 			estimatedEffort: a.float(),
 			actualEffort: a.float(),
 			tags: a.string().array(),
