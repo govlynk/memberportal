@@ -23,10 +23,11 @@ const initialFormState = {
 	description: "",
 	priority: "MEDIUM",
 	status: "TODO",
-	dueDate: "",
+	dueDate: new Date().toISOString().split("T")[0],
 	estimatedEffort: "",
 	actualEffort: "",
 	tags: [],
+	position: 0,
 };
 
 export function TodoDialog({ open, onClose, editTodo = null }) {
@@ -52,7 +53,7 @@ export function TodoDialog({ open, onClose, editTodo = null }) {
 			});
 		} else {
 			const statusTodos = todos.filter((t) => t.status === "TODO");
-			const maxPosition = Math.max(...statusTodos.map((t) => t.position), -1);
+			const maxPosition = Math.max(...statusTodos.map((t) => t.position), 0);
 
 			setFormData({
 				...initialFormState,
@@ -104,15 +105,20 @@ export function TodoDialog({ open, onClose, editTodo = null }) {
 			estimatedEffort: parseFloat(formData.estimatedEffort) || 0,
 			actualEffort: parseFloat(formData.actualEffort) || 0,
 			dueDate: new Date(formData.dueDate).toISOString(),
+			status: "TODO",
+			priority: formData.priority || "MEDIUM",
 		};
 
-		if (editTodo) {
-			await updateTodo(editTodo.id, todoData);
-		} else {
-			await addTodo(todoData);
+		try {
+			if (editTodo) {
+				await updateTodo(editTodo.id, todoData);
+			} else {
+				await addTodo(todoData);
+			}
+			onClose();
+		} catch (error) {
+			console.error("Error saving todo:", error);
 		}
-
-		onClose();
 	};
 
 	return (

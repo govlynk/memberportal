@@ -132,7 +132,14 @@ export function KanbanBoard({ onEditTodo }) {
 	const [activeTodo, setActiveTodo] = useState(null);
 
 	useEffect(() => {
+		// Initial fetch of todos
 		fetchTodos();
+
+		// Cleanup subscription when component unmounts
+		return () => {
+			const { cleanup } = useTodoStore.getState();
+			cleanup();
+		};
 	}, [fetchTodos]);
 
 	const sensors = useSensors(
@@ -226,10 +233,18 @@ export function KanbanBoard({ onEditTodo }) {
 		>
 			<Box
 				sx={{
-					display: "grid",
-					gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+					display: "flex",
+					flexDirection: "row",
+					justifyContent: "space-between",
+					width: "100%", // Full width
+					minHeight: "calc(100vh - 100px)", // Full height minus header
 					gap: 3,
 					mt: 4,
+					overflowX: "auto",
+					pb: 2, // Add padding bottom for scrollbar
+					"& > *": {
+						flex: "0 0 350px", // Fixed width columns
+					},
 				}}
 			>
 				{Object.entries(COLUMNS).map(([status, title]) => (

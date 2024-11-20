@@ -1,4 +1,3 @@
-// todoStore.jsx
 import { generateClient } from "aws-amplify/data";
 import { create } from "zustand";
 
@@ -11,7 +10,6 @@ export const useTodoStore = create((set) => ({
 	subscription: null,
 
 	fetchTodos: async () => {
-		// Added fetchTodos function
 		set({ loading: true });
 		try {
 			const subscription = client.models.Todo.observeQuery().subscribe({
@@ -36,17 +34,19 @@ export const useTodoStore = create((set) => ({
 	addTodo: async (todoData) => {
 		set({ loading: true });
 		try {
-			await client.models.Todo.create({
+			const result = await client.models.Todo.create({
 				...todoData,
 				status: "TODO",
-				priority: "MEDIUM",
+				priority: todoData.priority || "MEDIUM",
 				position: todoData.position || 0,
 				dueDate: todoData.dueDate || new Date().toISOString(),
 			});
 			set({ loading: false });
+			return result;
 		} catch (err) {
 			console.error("Create todo error:", err);
 			set({ error: "Failed to create todo", loading: false });
+			throw err;
 		}
 	},
 
@@ -54,16 +54,7 @@ export const useTodoStore = create((set) => ({
 		try {
 			const { data: updatedTodo } = await client.models.Todo.update({
 				id,
-				title: updates.title,
-				description: updates.description,
-				status: updates.status,
-				priority: updates.priority,
-				dueDate: updates.dueDate ? new Date(updates.dueDate).toISOString() : undefined,
-				estimatedEffort: updates.estimatedEffort !== undefined ? parseFloat(updates.estimatedEffort) : undefined,
-				actualEffort: updates.actualEffort !== undefined ? parseFloat(updates.actualEffort) : undefined,
-				tags: updates.tags,
-				position: updates.position,
-				assigneeId: updates.assigneeId,
+				...updates,
 			});
 
 			set((state) => ({
@@ -80,7 +71,6 @@ export const useTodoStore = create((set) => ({
 
 	updateTodos: async (newTodos) => {
 		try {
-			// Update todos one by one to ensure proper error handling
 			for (let i = 0; i < newTodos.length; i++) {
 				const todo = newTodos[i];
 				await client.models.Todo.update({
@@ -112,6 +102,7 @@ export const useTodoStore = create((set) => ({
 			throw err;
 		}
 	},
+
 	updateTodoStatus: async (id, status) => {
 		set({ loading: true });
 		try {

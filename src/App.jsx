@@ -19,8 +19,8 @@ function App({ signOut }) {
 	}, []);
 
 	return (
-		<div className='container mx-auto p-4'>
-			<header className='flex justify-between items-center mb-6'>
+		<div style={{ width: "100vw", height: "100vh" }}>
+			<header className='flex justify-between items-center p-4'>
 				<div>
 					<h1 className='text-2xl font-bold'>Todo List</h1>
 					{user && <p>Welcome, {user.username}</p>}

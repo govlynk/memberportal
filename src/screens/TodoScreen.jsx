@@ -24,8 +24,8 @@ function TodoScreen() {
 	};
 
 	return (
-		<Container maxWidth='xl'>
-			<Box sx={{ py: 4 }}>
+		<Container maxWidth={false} disableGutters>
+			<Box sx={{ p: 4, width: "100%" }}>
 				<TodoHeader onAddClick={handleAddClick} />
 				<KanbanBoard onEditTodo={handleEditClick} />
 				<TodoDialog open={dialogOpen} onClose={handleCloseDialog} editTodo={editTodo} />
