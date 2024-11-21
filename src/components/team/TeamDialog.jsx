@@ -68,6 +68,10 @@ export function TeamDialog({ open, onClose, editTeam = null, companyId }) {
       setError("Role is required");
       return false;
     }
+    if (!companyId) {
+      setError("No company selected");
+      return false;
+    }
     return true;
   };
 
@@ -147,17 +151,15 @@ export function TeamDialog({ open, onClose, editTeam = null, companyId }) {
           </Box>
           <FormControl fullWidth required error={error === "Role is required"}>
             <InputLabel>Role</InputLabel>
-            <Select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              label="Role"
-            >
-              <MenuItem value="MANAGER">Manager</MenuItem>
-              <MenuItem value="DEVELOPER">Developer</MenuItem>
-              <MenuItem value="DESIGNER">Designer</MenuItem>
-              <MenuItem value="ANALYST">Analyst</MenuItem>
-              <MenuItem value="CONSULTANT">Consultant</MenuItem>
+            <Select name='role' value={formData.role} onChange={handleChange} label='Role'>
+              <MenuItem value='EXECUTIVE'>Executive</MenuItem>
+              <MenuItem value='SALES'>Sales</MenuItem>
+              <MenuItem value='CUSTOMER SERVICE'>Customer Service</MenuItem>
+              <MenuItem value='MARKETING MANAGER'>Marketing</MenuItem>
+              <MenuItem value='FINANCE'>Finance</MenuItem>
+              <MenuItem value='LEGAL'>Legal</MenuItem>
+              <MenuItem value='CONTRACTS'>Contracts</MenuItem>
+              <MenuItem value='ENGINEERING'>Engineering</MenuItem>
             </Select>
           </FormControl>
           <TextField

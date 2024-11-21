@@ -11,8 +11,12 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import { useCompanyStore } from "../../stores/companyStore";
+import { useUserCompanyStore } from "../../stores/userCompanyStore";
+import { useAuthStore } from "../../stores/authStore";
 
 const initialFormState = {
   legalBusinessName: "",
@@ -24,10 +28,14 @@ const initialFormState = {
   companyPhoneNumber: "",
   companyWebsite: "",
   status: "ACTIVE",
+  associateCurrentUser: true,
+  userRole: "ADMIN",
 };
 
 export function CompanyDialog({ open, onClose, editCompany = null }) {
   const { addCompany, updateCompany } = useCompanyStore();
+  const { associateUserWithCompany } = useUserCompanyStore();
+  const currentUser = useAuthStore((state) => state.user);
   const [formData, setFormData] = useState(initialFormState);
   const [error, setError] = useState(null);
 
@@ -39,15 +47,19 @@ export function CompanyDialog({ open, onClose, editCompany = null }) {
     }
 
     if (editCompany) {
-      setFormData(editCompany);
+      setFormData({
+        ...editCompany,
+        associateCurrentUser: false,
+        userRole: "ADMIN",
+      });
     }
   }, [open, editCompany]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'associateCurrentUser' ? checked : value,
     }));
     setError(null);
   };
@@ -68,10 +80,16 @@ export function CompanyDialog({ open, onClose, editCompany = null }) {
     if (!validateForm()) return;
 
     try {
+      let company;
       if (editCompany) {
-        await updateCompany(editCompany.id, formData);
+        company = await updateCompany(editCompany.id, formData);
       } else {
-        await addCompany(formData);
+        company = await addCompany(formData);
+        
+        // Associate the current user if checkbox is checked
+        if (formData.associateCurrentUser && currentUser?.sub) {
+          await associateUserWithCompany(company.id, formData.userRole);
+        }
       }
       onClose();
     } catch (err) {
@@ -179,6 +197,36 @@ export function CompanyDialog({ open, onClose, editCompany = null }) {
               <MenuItem value="PENDING">Pending</MenuItem>
             </Select>
           </FormControl>
+
+          {!editCompany && (
+            <>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.associateCurrentUser}
+                    onChange={handleChange}
+                    name="associateCurrentUser"
+                  />
+                }
+                label="Associate me with this company"
+              />
+              {formData.associateCurrentUser && (
+                <FormControl fullWidth>
+                  <InputLabel>Your Role</InputLabel>
+                  <Select
+                    name="userRole"
+                    value={formData.userRole}
+                    onChange={handleChange}
+                    label="Your Role"
+                  >
+                    <MenuItem value="ADMIN">Administrator</MenuItem>
+                    <MenuItem value="MANAGER">Manager</MenuItem>
+                    <MenuItem value="MEMBER">Team Member</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+            </>
+          )}
         </Box>
       </DialogContent>
       <DialogActions>

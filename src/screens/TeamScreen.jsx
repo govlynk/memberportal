@@ -14,30 +14,29 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { UserPlus, Edit, Trash2, ArrowLeft } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTeamStore } from "../stores/teamStore";
-import { useCompanyStore } from "../stores/companyStore";
+import { useUserCompanyStore } from "../stores/userCompanyStore";
 import { TeamDialog } from "../components/team/TeamDialog";
 
 export default function TeamScreen() {
-  const { companyId } = useParams();
   const navigate = useNavigate();
   const { teams, fetchTeams, removeTeam, loading, error } = useTeamStore();
-  const { companies } = useCompanyStore();
+  const { getActiveCompany } = useUserCompanyStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTeam, setEditTeam] = useState(null);
 
-  const company = companies.find(c => c.id === companyId);
+  const activeCompany = getActiveCompany();
 
   useEffect(() => {
-    if (companyId) {
-      fetchTeams(companyId);
+    if (activeCompany?.id) {
+      fetchTeams(activeCompany.id);
     }
     return () => {
       const { cleanup } = useTeamStore.getState();
       cleanup();
     };
-  }, [companyId, fetchTeams]);
+  }, [activeCompany?.id, fetchTeams]);
 
   const handleAddClick = () => {
     setEditTeam(null);
@@ -63,6 +62,16 @@ export default function TeamScreen() {
   const handleBack = () => {
     navigate('/company');
   };
+
+  if (!activeCompany) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="error">
+          Please select a company first
+        </Typography>
+      </Box>
+    );
+  }
 
   if (loading) {
     return (
@@ -94,11 +103,9 @@ export default function TeamScreen() {
           <Typography variant="h4" sx={{ fontWeight: "bold" }}>
             Team Members
           </Typography>
-          {company && (
-            <Typography variant="subtitle1" color="text.secondary">
-              {company.legalBusinessName}
-            </Typography>
-          )}
+          <Typography variant="subtitle1" color="text.secondary">
+            {activeCompany.legalBusinessName}
+          </Typography>
         </Box>
         <Button
           variant="contained"
@@ -114,12 +121,12 @@ export default function TeamScreen() {
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>Department</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell key="name">Name</TableCell>
+              <TableCell key="role">Role</TableCell>
+              <TableCell key="email">Email</TableCell>
+              <TableCell key="phone">Phone</TableCell>
+              <TableCell key="department">Department</TableCell>
+              <TableCell key="actions" align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -159,7 +166,7 @@ export default function TeamScreen() {
         open={dialogOpen} 
         onClose={handleCloseDialog} 
         editTeam={editTeam}
-        companyId={companyId} 
+        companyId={activeCompany.id} 
       />
     </Box>
   );
