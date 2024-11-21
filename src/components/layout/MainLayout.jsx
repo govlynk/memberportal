@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { Box, useTheme } from "@mui/material";
-import Topbar from "./Topbar";
+import TopBar from "./TopBar";
 import SidebarMenu from "./SidebarMenu";
 import { useAuthStore } from "../../stores/authStore";
 
@@ -18,7 +18,7 @@ export function MainLayout({ signOut }) {
 		>
 			<SidebarMenu />
 			<Box display='flex' flexDirection='column' width='100%' height='100%'>
-				<Topbar user={user} signOut={signOut} />
+				<TopBar user={user} signOut={signOut} />
 				<Box
 					component='main'
 					sx={{
