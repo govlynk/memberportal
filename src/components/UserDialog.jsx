@@ -17,6 +17,8 @@ import {
 } from "@mui/material";
 import { useCompanyStore } from "../stores/companyStore";
 import { useUserStore } from "../stores/userStore";
+import { useUserCompanyRoleStore } from "../stores/userCompanyRoleStore";
+import { useAuthStore } from "../stores/authStore";
 
 const initialFormState = {
 	cognitoId: "",
@@ -24,7 +26,7 @@ const initialFormState = {
 	name: "",
 	phone: "",
 	status: "ACTIVE",
-	companies: [],
+	selectedCompanies: [],
 };
 
 export const UserDialog = ({ open, onClose, editUser = null }) => {
@@ -32,20 +34,34 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 	const [error, setError] = useState(null);
 	const { companies, fetchCompanies } = useCompanyStore();
 	const { addUser, updateUser } = useUserStore();
+	const { addUserCompanyRole, removeUserCompanyRole, fetchUserCompanyRoles } = useUserCompanyRoleStore();
+	const currentUser = useAuthStore((state) => state.user);
 
 	useEffect(() => {
-		fetchCompanies();
-	}, [fetchCompanies]);
+		if (open) {
+			fetchCompanies();
+			if (editUser?.id) {
+				fetchUserCompanyRoles(editUser.id);
+			}
+		}
+	}, [open, editUser?.id, fetchCompanies, fetchUserCompanyRoles]);
 
 	useEffect(() => {
 		if (editUser) {
+			let userCompanies = [];
+			if (editUser.companies?.items) {
+				userCompanies = editUser.companies.items.map(item => item.company).filter(Boolean);
+			} else if (Array.isArray(editUser.companies)) {
+				userCompanies = editUser.companies;
+			}
+
 			setFormData({
 				cognitoId: editUser.cognitoId || "",
 				email: editUser.email || "",
 				name: editUser.name || "",
 				phone: editUser.phone || "",
 				status: editUser.status || "ACTIVE",
-				companies: editUser.companies || [],
+				selectedCompanies: userCompanies,
 			});
 		} else {
 			setFormData(initialFormState);
@@ -64,7 +80,7 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 	const handleCompanyChange = (event, newValue) => {
 		setFormData((prev) => ({
 			...prev,
-			companies: newValue || [],
+			selectedCompanies: newValue || [],
 		}));
 	};
 
@@ -77,6 +93,10 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 			setError("Name is required");
 			return false;
 		}
+		if (!currentUser?.sub) {
+			setError("You must be logged in to perform this action");
+			return false;
+		}
 		return true;
 	};
 
@@ -85,22 +105,68 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 
 		try {
 			const userData = {
-				...formData,
+				cognitoId: formData.cognitoId || currentUser.sub,
 				email: formData.email.trim(),
 				name: formData.name.trim(),
 				phone: formData.phone?.trim() || "",
+				status: formData.status,
+				lastLogin: new Date().toISOString(),
 			};
 
+			let savedUser;
 			if (editUser) {
-				await updateUser(editUser.id, userData);
+				savedUser = await updateUser(editUser.id, userData);
+
+				const currentCompanyIds = formData.selectedCompanies.map(c => c.id);
+				const existingCompanyIds = editUser.companies?.items?.map(c => c.companyId) || [];
+
+				const toRemove = existingCompanyIds.filter(id => !currentCompanyIds.includes(id));
+				for (const companyId of toRemove) {
+					const association = editUser.companies?.items?.find(c => c.companyId === companyId);
+					if (association?.id) {
+						await removeUserCompanyRole(association.id);
+					}
+				}
+
+				const toAdd = currentCompanyIds.filter(id => !existingCompanyIds.includes(id));
+				for (const companyId of toAdd) {
+					await addUserCompanyRole({
+						userId: editUser.id,
+						companyId,
+						roleId: "MEMBER",
+						status: "ACTIVE"
+					});
+				}
 			} else {
-				await addUser(userData);
+				savedUser = await addUser(userData);
+
+				for (const company of formData.selectedCompanies) {
+					await addUserCompanyRole({
+						userId: savedUser.id,
+						companyId: company.id,
+						roleId: "MEMBER",
+						status: "ACTIVE"
+					});
+				}
 			}
+
 			onClose();
 		} catch (err) {
 			console.error("Error saving user:", err);
-			setError(err.message || "Failed to save user");
+			setError(err.message || "Failed to save user. Please check your input and try again.");
 		}
+	};
+
+	const renderCompanyChip = (props, company, index) => {
+		const { onDelete } = props;
+		return (
+			<Chip
+				key={company.id}
+				label={company.legalBusinessName}
+				onDelete={onDelete}
+				size="small"
+			/>
+		);
 	};
 
 	return (
@@ -139,7 +205,13 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 						onChange={handleChange}
 						error={!formData.name && Boolean(error)}
 					/>
-					<TextField fullWidth label='Phone' name='phone' value={formData.phone} onChange={handleChange} />
+					<TextField 
+						fullWidth 
+						label='Phone' 
+						name='phone' 
+						value={formData.phone} 
+						onChange={handleChange} 
+					/>
 					<FormControl fullWidth>
 						<InputLabel>Status</InputLabel>
 						<Select name='status' value={formData.status} onChange={handleChange} label='Status'>
@@ -152,18 +224,13 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 						multiple
 						options={companies || []}
 						getOptionLabel={(option) => option?.legalBusinessName || ""}
-						value={Array.isArray(formData.companies) ? formData.companies : []}
+						value={formData.selectedCompanies}
 						onChange={handleCompanyChange}
 						renderInput={(params) => (
 							<TextField {...params} label='Associated Companies' placeholder='Select companies' />
 						)}
-						renderTags={(value, getTagProps) =>
-							Array.isArray(value)
-								? value.map((option, index) => {
-										const { key, ...chipProps } = getTagProps({ index });
-										return <Chip key={key} {...chipProps} label={option?.legalBusinessName || ""} />;
-								  })
-								: null
+						renderTags={(tagValue, getTagProps) =>
+							tagValue.map((company, index) => renderCompanyChip(getTagProps({ index }), company, index))
 						}
 						isOptionEqualToValue={(option, value) => option?.id === value?.id}
 					/>

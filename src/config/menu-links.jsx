@@ -7,7 +7,8 @@ import {
   Medal,
   ListTodo,
   Building2,
-  UserCog
+  UserCog,
+  Settings
 } from "lucide-react";
 
 export const menuLinks = [
@@ -46,6 +47,10 @@ export const menuLinks = [
       {
         title: "Manage Users",
         path: "/users",
+      },
+      {
+        title: "User Company Roles",
+        path: "/user-company-roles",
       },
       {
         title: "Contacts Information",
@@ -97,7 +102,7 @@ export const menuLinks = [
   {
     id: 'admin',
     title: "Admin",
-    icon: User,
+    icon: Settings,
     links: [
       {
         title: "Company Admin",

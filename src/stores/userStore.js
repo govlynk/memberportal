@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { generateClient } from "aws-amplify/data";
 
-const client = generateClient();
+const client = generateClient({
+	authMode: "userPool",
+});
 
 export const useUserStore = create((set, get) => ({
 	users: [],
@@ -12,7 +14,16 @@ export const useUserStore = create((set, get) => ({
 	fetchUsers: async () => {
 		set({ loading: true });
 		try {
-			const subscription = client.models.User.observeQuery().subscribe({
+			const subscription = client.models.User.observeQuery({
+				include: {
+					companies: {
+						include: {
+							company: true,
+							role: true,
+						},
+					},
+				},
+			}).subscribe({
 				next: ({ items }) => {
 					set({
 						users: items,
@@ -21,23 +32,13 @@ export const useUserStore = create((set, get) => ({
 				},
 				error: (err) => {
 					console.error("Fetch users error:", err);
-					// Handle auth errors specifically
-					if (err.name === "NotAuthorizedException") {
-						set({ error: "Session expired. Please sign in again.", loading: false });
-					} else {
-						set({ error: "Failed to fetch users", loading: false });
-					}
+					set({ error: "Failed to fetch users", loading: false });
 				},
 			});
 			set({ subscription });
 		} catch (err) {
 			console.error("Fetch users error:", err);
-			// Handle auth errors specifically
-			if (err.name === "NotAuthorizedException") {
-				set({ error: "Session expired. Please sign in again.", loading: false });
-			} else {
-				set({ error: "Failed to fetch users", loading: false });
-			}
+			set({ error: "Failed to fetch users", loading: false });
 		}
 	},
 
@@ -88,9 +89,20 @@ export const useUserStore = create((set, get) => ({
 
 	removeUser: async (id) => {
 		try {
+			// First remove all UserCompanyRole associations
+			const userCompanyRoles = await client.models.UserCompanyRole.query({
+				filter: { userId: { eq: id } },
+			});
+
+			for (const role of userCompanyRoles.data) {
+				await client.models.UserCompanyRole.delete({ id: role.id });
+			}
+
+			// Then delete the user
 			await client.models.User.delete({
 				id,
 			});
+
 			set((state) => ({
 				users: state.users.filter((user) => user.id !== id),
 				error: null,
