@@ -4,6 +4,69 @@ import { Search, ArrowRight } from "lucide-react";
 import { useCompanyStore } from "../../stores/companyStore";
 import { getEntity } from "../../utils/samApi";
 
+const formatCompanyData = (entityData) => {
+	if (!entityData) return null;
+
+	return {
+		// Basic Information
+		uei: entityData.entityRegistration?.ueiSAM || "",
+		legalBusinessName: entityData.entityRegistration?.legalBusinessName || "",
+		dbaName: entityData.entityRegistration?.dbaName || "",
+		cageCode: entityData.entityRegistration?.cageCode || "",
+		registrationStatus: entityData.entityRegistration?.registrationStatus || "",
+		registrationExpirationDate: entityData.entityRegistration?.registrationExpirationDate || "",
+
+		// Physical Address
+		physicalAddress: {
+			addressLine1: entityData.coreData?.physicalAddress?.addressLine1 || "",
+			addressLine2: entityData.coreData?.physicalAddress?.addressLine2 || "",
+			city: entityData.coreData?.physicalAddress?.city || "",
+			stateOrProvinceCode: entityData.coreData?.physicalAddress?.stateOrProvinceCode || "",
+			zipCode: entityData.coreData?.physicalAddress?.zipCode || "",
+			zipCodePlus4: entityData.coreData?.physicalAddress?.zipCodePlus4 || "",
+			countryCode: entityData.coreData?.physicalAddress?.countryCode || "",
+		},
+
+		// Business Information
+		entityURL: entityData.coreData?.entityInformation?.entityURL || "",
+		entityStartDate: entityData.coreData?.entityInformation?.entityStartDate || "",
+		fiscalYearEndDate: entityData.coreData?.entityInformation?.fiscalYearEndCloseDate || "",
+
+		// Business Types
+		businessTypes:
+			entityData.coreData?.businessTypes?.businessTypeList?.map((type) => ({
+				code: type.businessTypeCode || "",
+				description: type.businessTypeDesc || "",
+			})) || [],
+
+		// NAICS Codes
+		naicsList:
+			entityData.assertions?.goodsAndServices?.naicsList?.map((naics) => ({
+				code: naics.naicsCode || "",
+				description: naics.naicsDescription || "",
+				isPrimary: naics.naicsCode === entityData.assertions?.goodsAndServices?.primaryNaics,
+			})) || [],
+
+		// Points of Contact
+		pointsOfContact: {
+			electronic: {
+				firstName: entityData.pointsOfContact?.electronicBusinessPOC?.firstName || "",
+				lastName: entityData.pointsOfContact?.electronicBusinessPOC?.lastName || "",
+				title: entityData.pointsOfContact?.electronicBusinessPOC?.title || "",
+				email: entityData.pointsOfContact?.electronicBusinessPOC?.email || "",
+				phone: entityData.pointsOfContact?.electronicBusinessPOC?.phoneNumber || "",
+			},
+			government: {
+				firstName: entityData.pointsOfContact?.governmentBusinessPOC?.firstName || "",
+				lastName: entityData.pointsOfContact?.governmentBusinessPOC?.lastName || "",
+				title: entityData.pointsOfContact?.governmentBusinessPOC?.title || "",
+				email: entityData.pointsOfContact?.governmentBusinessPOC?.email || "",
+				phone: entityData.pointsOfContact?.governmentBusinessPOC?.phoneNumber || "",
+			},
+		},
+	};
+};
+
 export function CompanySearch({ onCompanySelect }) {
 	const theme = useTheme();
 	const [uei, setUei] = useState("");
@@ -22,19 +85,11 @@ export function CompanySearch({ onCompanySelect }) {
 
 		try {
 			const entityData = await getEntity(uei.trim());
-			console.log("entityData:", entityData);
-			const formattedData = {
-				uei: entityData.ueiSAM,
-				legalBusinessName: entityData.entityRegistration.legalBusinessName,
-				dbaName: entityData.entityRegistration.dbaName,
-				address: entityData.coreData.physicalAddress.addressLine1,
-				address2: entityData.coreData.physicalAddress.addressLine2,
-				city: entityData.coreData.physicalAddress.city,
-				state: entityData.coreData.physicalAddress.stateOrProvinceCode,
-				zipCode: entityData.coreData.physicalAddress.zipCode,
-				countryCode: entityData.coreData.physicalAddress.countryCode,
-				cageCode: entityData.entityRegistration.cageCode,
-			};
+			const formattedData = formatCompanyData(entityData);
+
+			if (!formattedData) {
+				throw new Error("No company data found for the provided UEI");
+			}
 
 			setSearchResult(formattedData);
 		} catch (err) {
@@ -123,20 +178,34 @@ export function CompanySearch({ onCompanySelect }) {
 							</Typography>
 							<Typography variant='body1'>{searchResult.cageCode || "-"}</Typography>
 						</Box>
+						<Box>
+							<Typography variant='caption' color='text.secondary'>
+								Registration Status
+							</Typography>
+							<Typography variant='body1'>{searchResult.registrationStatus}</Typography>
+						</Box>
+						<Box>
+							<Typography variant='caption' color='text.secondary'>
+								Expiration Date
+							</Typography>
+							<Typography variant='body1'>{searchResult.registrationExpirationDate || "-"}</Typography>
+						</Box>
 						<Box sx={{ gridColumn: "1 / -1" }}>
 							<Typography variant='caption' color='text.secondary'>
-								Address
+								Physical Address
 							</Typography>
 							<Typography variant='body1'>
-								{searchResult.address}
-								{searchResult.address2 && (
+								{searchResult.physicalAddress.addressLine1}
+								{searchResult.physicalAddress.addressLine2 && (
 									<>
 										<br />
-										{searchResult.address2}
+										{searchResult.physicalAddress.addressLine2}
 									</>
 								)}
 								<br />
-								{searchResult.city}, {searchResult.state} {searchResult.zipCode}
+								{searchResult.physicalAddress.city}, {searchResult.physicalAddress.stateOrProvinceCode}{" "}
+								{searchResult.physicalAddress.zipCode}
+								{searchResult.physicalAddress.zipCodePlus4 && `-${searchResult.physicalAddress.zipCodePlus4}`}
 							</Typography>
 						</Box>
 					</Box>

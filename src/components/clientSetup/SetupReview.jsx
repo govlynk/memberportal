@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Button, Typography, Paper, Divider, Alert, CircularProgress, useTheme } from "@mui/material";
-import { ArrowLeft, Check, Building2, User } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { useCompanyStore } from "../../stores/companyStore";
 import { useUserStore } from "../../stores/userStore";
 import { useTeamStore } from "../../stores/teamStore";
@@ -77,12 +77,12 @@ export function SetupReview({ setupData, onBack }) {
 			console.log("Creating team with data:", {
 				companyId: company.id,
 				role: "TEAM_MEMBER",
-				contact: setupData.team.contact,
+				contact: setupData.team?.contact,
 			});
 			const team = await addTeam({
 				companyId: company.id,
 				role: "TEAM_MEMBER",
-				contact: setupData.team.contact,
+				contact: setupData.team?.contact,
 			});
 			console.log("Created team:", team);
 

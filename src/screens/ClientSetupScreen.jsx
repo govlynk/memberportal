@@ -11,7 +11,8 @@ export default function ClientSetupScreen() {
 	const [activeStep, setActiveStep] = useState(0);
 	const [setupData, setSetupData] = useState({
 		company: null,
-		admin: null,
+		user: null,
+		team: null,
 	});
 
 	const handleCompanySelect = (companyData) => {
@@ -20,7 +21,7 @@ export default function ClientSetupScreen() {
 	};
 
 	const handleAdminSetup = (adminData) => {
-		setSetupData((prev) => ({ ...prev, admin: adminData }));
+		setSetupData((prev) => ({ ...prev, user: adminData }));
 		setActiveStep(2);
 	};
 
