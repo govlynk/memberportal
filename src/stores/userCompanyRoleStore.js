@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { generateClient } from "aws-amplify/data";
+import { useAuthStore } from "./authStore";
 
 const client = generateClient({
 	authMode: "userPool",
@@ -14,17 +15,12 @@ export const useUserCompanyRoleStore = create((set, get) => ({
 	fetchUserCompanyRoles: async (userId = null) => {
 		set({ loading: true, error: null });
 		try {
-			console.log("Fetching user company roles with userId:", userId);
 			const filter = userId ? { userId: { eq: userId } } : undefined;
 
-			// First, get all UserCompanyRoles
 			const subscription = client.models.UserCompanyRole.observeQuery({
 				filter,
 			}).subscribe({
 				next: async ({ items }) => {
-					console.log("Received user company roles:", items);
-
-					// Fetch related user and company data for each role
 					const rolesWithRelations = await Promise.all(
 						items.map(async (role) => {
 							const [user, company] = await Promise.all([
@@ -39,8 +35,6 @@ export const useUserCompanyRoleStore = create((set, get) => ({
 							};
 						})
 					);
-
-					console.log("Roles with relations:", rolesWithRelations);
 
 					set({
 						userCompanyRoles: rolesWithRelations,
@@ -62,15 +56,19 @@ export const useUserCompanyRoleStore = create((set, get) => ({
 	addUserCompanyRole: async (roleData) => {
 		set({ loading: true, error: null });
 		try {
-			console.log("Creating user company role with data:", roleData);
+			const { userId, companyId, roleId, status } = roleData;
+
+			if (!userId || !companyId) {
+				throw new Error("userId and companyId are required");
+			}
+
 			const userCompanyRole = await client.models.UserCompanyRole.create({
-				userId: roleData.userId,
-				companyId: roleData.companyId,
-				roleId: roleData.roleId,
-				status: roleData.status || "ACTIVE",
+				userId,
+				companyId,
+				roleId,
+				status: status || "ACTIVE",
 			});
 
-			// Fetch the related user and company data
 			const [user, company] = await Promise.all([
 				client.models.User.get({ id: userCompanyRole.userId }),
 				client.models.Company.get({ id: userCompanyRole.companyId }),
@@ -81,8 +79,6 @@ export const useUserCompanyRoleStore = create((set, get) => ({
 				user,
 				company,
 			};
-
-			console.log("Created role with complete data:", completeRole);
 
 			set((state) => ({
 				userCompanyRoles: [...state.userCompanyRoles, completeRole],
@@ -101,13 +97,11 @@ export const useUserCompanyRoleStore = create((set, get) => ({
 	updateUserCompanyRole: async (id, updates) => {
 		set({ loading: true, error: null });
 		try {
-			console.log("Updating user company role:", { id, updates });
 			const updatedRole = await client.models.UserCompanyRole.update({
 				id,
 				...updates,
 			});
 
-			// Fetch the related user and company data
 			const [user, company] = await Promise.all([
 				client.models.User.get({ id: updatedRole.userId }),
 				client.models.Company.get({ id: updatedRole.companyId }),
@@ -118,8 +112,6 @@ export const useUserCompanyRoleStore = create((set, get) => ({
 				user,
 				company,
 			};
-
-			console.log("Updated role with complete data:", completeRole);
 
 			set((state) => ({
 				userCompanyRoles: state.userCompanyRoles.map((role) => (role.id === id ? completeRole : role)),
@@ -137,7 +129,6 @@ export const useUserCompanyRoleStore = create((set, get) => ({
 	removeUserCompanyRole: async (id) => {
 		set({ loading: true, error: null });
 		try {
-			console.log("Removing user company role:", id);
 			await client.models.UserCompanyRole.delete({
 				id,
 			});

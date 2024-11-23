@@ -50,7 +50,7 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 		if (editUser) {
 			let userCompanies = [];
 			if (editUser.companies?.items) {
-				userCompanies = editUser.companies.items.map(item => item.company).filter(Boolean);
+				userCompanies = editUser.companies.items.map((item) => item.company).filter(Boolean);
 			} else if (Array.isArray(editUser.companies)) {
 				userCompanies = editUser.companies;
 			}
@@ -117,24 +117,24 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 			if (editUser) {
 				savedUser = await updateUser(editUser.id, userData);
 
-				const currentCompanyIds = formData.selectedCompanies.map(c => c.id);
-				const existingCompanyIds = editUser.companies?.items?.map(c => c.companyId) || [];
+				const currentCompanyIds = formData.selectedCompanies.map((c) => c.id);
+				const existingCompanyIds = editUser.companies?.items?.map((c) => c.companyId) || [];
 
-				const toRemove = existingCompanyIds.filter(id => !currentCompanyIds.includes(id));
+				const toRemove = existingCompanyIds.filter((id) => !currentCompanyIds.includes(id));
 				for (const companyId of toRemove) {
-					const association = editUser.companies?.items?.find(c => c.companyId === companyId);
+					const association = editUser.companies?.items?.find((c) => c.companyId === companyId);
 					if (association?.id) {
 						await removeUserCompanyRole(association.id);
 					}
 				}
 
-				const toAdd = currentCompanyIds.filter(id => !existingCompanyIds.includes(id));
+				const toAdd = currentCompanyIds.filter((id) => !existingCompanyIds.includes(id));
 				for (const companyId of toAdd) {
 					await addUserCompanyRole({
 						userId: editUser.id,
 						companyId,
 						roleId: "MEMBER",
-						status: "ACTIVE"
+						status: "ACTIVE",
 					});
 				}
 			} else {
@@ -145,7 +145,7 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 						userId: savedUser.id,
 						companyId: company.id,
 						roleId: "MEMBER",
-						status: "ACTIVE"
+						status: "ACTIVE",
 					});
 				}
 			}
@@ -159,14 +159,7 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 
 	const renderCompanyChip = (props, company, index) => {
 		const { onDelete } = props;
-		return (
-			<Chip
-				key={company.id}
-				label={company.legalBusinessName}
-				onDelete={onDelete}
-				size="small"
-			/>
-		);
+		return <Chip key={company.id} label={company.legalBusinessName} onDelete={onDelete} size='small' />;
 	};
 
 	return (
@@ -205,13 +198,7 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 						onChange={handleChange}
 						error={!formData.name && Boolean(error)}
 					/>
-					<TextField 
-						fullWidth 
-						label='Phone' 
-						name='phone' 
-						value={formData.phone} 
-						onChange={handleChange} 
-					/>
+					<TextField fullWidth label='Phone' name='phone' value={formData.phone} onChange={handleChange} />
 					<FormControl fullWidth>
 						<InputLabel>Status</InputLabel>
 						<Select name='status' value={formData.status} onChange={handleChange} label='Status'>
