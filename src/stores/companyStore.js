@@ -15,12 +15,6 @@ export const useCompanyStore = create((set, get) => ({
 	fetchCompanies: async () => {
 		set({ loading: true });
 		try {
-			// Get current user's ID
-			const currentUser = useAuthStore.getState().user;
-			if (!currentUser?.sub) {
-				throw new Error("User not authenticated");
-			}
-
 			const subscription = client.models.Company.observeQuery().subscribe({
 				next: ({ items }) => {
 					set({
@@ -48,7 +42,6 @@ export const useCompanyStore = create((set, get) => ({
 				throw new Error("User not authenticated");
 			}
 
-			// First create the company
 			const company = await client.models.Company.create({
 				legalBusinessName: companyData.legalBusinessName,
 				dbaName: companyData.dbaName,
@@ -61,11 +54,10 @@ export const useCompanyStore = create((set, get) => ({
 				status: companyData.status || "ACTIVE",
 			});
 
-			// Then create the UserCompanyRole
 			await client.models.UserCompanyRole.create({
 				userId: currentUser.sub,
 				companyId: company.id,
-				roleId: "ADMIN", // Default role for company creator
+				roleId: "ADMIN",
 				status: "ACTIVE",
 			});
 

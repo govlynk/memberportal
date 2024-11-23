@@ -23,6 +23,8 @@ export default function UserScreen() {
 	const { users, fetchUsers, removeUser, loading, error } = useUserStore();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editUser, setEditUser] = useState(null);
+	const [deleteLoading, setDeleteLoading] = useState(false);
+	const [deleteError, setDeleteError] = useState(null);
 
 	useEffect(() => {
 		fetchUsers();
@@ -44,10 +46,15 @@ export default function UserScreen() {
 
 	const handleDeleteClick = async (userId) => {
 		if (window.confirm("Are you sure you want to delete this user?")) {
+			setDeleteLoading(true);
+			setDeleteError(null);
 			try {
 				await removeUser(userId);
 			} catch (err) {
 				console.error("Error deleting user:", err);
+				setDeleteError("Failed to delete user. Please try again.");
+			} finally {
+				setDeleteLoading(false);
 			}
 		}
 	};
@@ -60,14 +67,6 @@ export default function UserScreen() {
 		);
 	}
 
-	if (error) {
-		return (
-			<Box sx={{ p: 3 }}>
-				<Alert severity='error'>{error}</Alert>
-			</Box>
-		);
-	}
-
 	return (
 		<Box sx={{ p: 3 }}>
 			<Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
@@ -76,6 +75,12 @@ export default function UserScreen() {
 					Add User
 				</Button>
 			</Box>
+
+			{(error || deleteError) && (
+				<Alert severity='error' sx={{ mb: 3 }}>
+					{error || deleteError}
+				</Alert>
+			)}
 
 			<TableContainer component={Paper}>
 				<Table>
@@ -91,7 +96,7 @@ export default function UserScreen() {
 					</TableHead>
 					<TableBody>
 						{users?.map((user) => (
-							<TableRow key={`user-${user.id || user.cognitoId || user.email}`} hover>
+							<TableRow key={user.id} hover>
 								<TableCell>{user.name}</TableCell>
 								<TableCell>{user.email}</TableCell>
 								<TableCell>{user.phone || "-"}</TableCell>
@@ -104,7 +109,12 @@ export default function UserScreen() {
 								</TableCell>
 								<TableCell>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "-"}</TableCell>
 								<TableCell align='right'>
-									<IconButton onClick={() => handleEditClick(user)} size='small' title='Edit User'>
+									<IconButton
+										onClick={() => handleEditClick(user)}
+										size='small'
+										title='Edit User'
+										disabled={deleteLoading}
+									>
 										<Edit size={18} />
 									</IconButton>
 									<IconButton
@@ -112,13 +122,14 @@ export default function UserScreen() {
 										size='small'
 										color='error'
 										title='Delete User'
+										disabled={deleteLoading}
 									>
 										<Trash2 size={18} />
 									</IconButton>
 								</TableCell>
 							</TableRow>
 						))}
-						{users?.length === 0 && (
+						{(!users || users.length === 0) && (
 							<TableRow>
 								<TableCell colSpan={6} align='center'>
 									No users found

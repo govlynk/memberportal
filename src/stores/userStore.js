@@ -89,19 +89,27 @@ export const useUserStore = create((set, get) => ({
 
 	removeUser: async (id) => {
 		try {
-			// First remove all UserCompanyRole associations
-			const userCompanyRoles = await client.models.UserCompanyRole.query({
+			// First get all UserCompanyRole associations for this user
+			const userCompanyRoles = await client.models.UserCompanyRole.list({
 				filter: { userId: { eq: id } },
 			});
 
+			// Delete all UserCompanyRole associations
 			for (const role of userCompanyRoles.data) {
 				await client.models.UserCompanyRole.delete({ id: role.id });
 			}
 
-			// Then delete the user
-			await client.models.User.delete({
-				id,
+			// Delete all todos assigned to this user
+			const todos = await client.models.Todo.list({
+				filter: { assigneeId: { eq: id } },
 			});
+
+			for (const todo of todos.data) {
+				await client.models.Todo.delete({ id: todo.id });
+			}
+
+			// Finally delete the user
+			await client.models.User.delete({ id });
 
 			set((state) => ({
 				users: state.users.filter((user) => user.id !== id),
