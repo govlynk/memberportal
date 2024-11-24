@@ -23,7 +23,7 @@ const COMPANY_ROLES = [
 	"Technology",
 	"Engineering",
 	"Operations",
-	"Human Resources",
+	"HumanResources",
 	"Legal",
 	"Contracting",
 	"Servicing",
@@ -33,6 +33,7 @@ const COMPANY_ROLES = [
 export function AdminSetup({ onSubmit, onBack, companyData }) {
 	const theme = useTheme();
 	const [formData, setFormData] = useState({
+		cognitoId: "",
 		firstName: "",
 		lastName: "",
 		title: "",
@@ -124,9 +125,7 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 							name='cognitoId'
 							value={formData.cognitoId}
 							onChange={handleChange}
-							error={!!errors.cognitoId}
-							helperText={errors.cognitoId}
-							required
+							helperText='Optional - Enter if user already exists in Cognito'
 						/>
 						<TextField
 							fullWidth

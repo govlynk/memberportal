@@ -19,9 +19,9 @@ export const useUserStore = create((set, get) => ({
 					companies: {
 						include: {
 							company: true,
-							role: true,
 						},
 					},
+					contact: true,
 					todos: {
 						include: {
 							assignee: true,
@@ -126,6 +126,18 @@ export const useUserStore = create((set, get) => ({
 				await client.models.Todo.update({
 					id: todo.id,
 					assigneeId: null,
+				});
+			}
+
+			// Update associated contact if exists
+			const contact = await client.models.Contact.list({
+				filter: { userId: { eq: id } },
+			});
+
+			if (contact.data.length > 0) {
+				await client.models.Contact.update({
+					id: contact.data[0].id,
+					userId: null,
 				});
 			}
 

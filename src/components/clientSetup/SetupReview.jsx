@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Box, Button, Typography, Paper, Divider, Alert, CircularProgress, useTheme } from "@mui/material";
 import { ArrowLeft, Check } from "lucide-react";
 import { generateClient } from "aws-amplify/data";
-import { useAuthStore } from "../../stores/authStore";
 
 const client = generateClient({
 	authMode: "userPool",
@@ -13,7 +12,6 @@ export function SetupReview({ setupData, onBack }) {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [success, setSuccess] = useState(false);
-	const currentUser = useAuthStore((state) => state.user);
 
 	const handleSetup = async () => {
 		setLoading(true);
@@ -21,10 +19,6 @@ export function SetupReview({ setupData, onBack }) {
 		console.log("Starting setup process...");
 
 		try {
-			if (!currentUser?.sub) {
-				throw new Error("User not authenticated");
-			}
-
 			// 1. Create company
 			console.log("Creating company...");
 			const companyData = {
@@ -51,30 +45,7 @@ export function SetupReview({ setupData, onBack }) {
 			}
 			const companyId = companyResponse.data.id;
 
-			// 2. Create user
-			console.log("Creating user...");
-			const userData = {
-				cognitoId: setupData.user.cognitoId,
-				email: setupData.user.contactEmail,
-				name: `${setupData.user.firstName} ${setupData.user.lastName}`.trim(),
-				phone: setupData.user.contactMobilePhone || null,
-
-				companies: [companyId],
-
-				// companies: [setupData.company.uei],
-				status: "ACTIVE",
-				lastLogin: new Date().toISOString(),
-			};
-
-			const userResponse = await client.models.User.create(userData);
-			console.log("User created:", userResponse);
-
-			if (!userResponse?.data?.id) {
-				throw new Error("Failed to create user");
-			}
-			const userId = userResponse.data.id;
-
-			// 3. Create contact
+			// 2. Create contact
 			console.log("Creating contact...");
 			const contactData = {
 				firstName: setupData.user.firstName,
@@ -92,6 +63,7 @@ export function SetupReview({ setupData, onBack }) {
 				workAddressCountryCode: setupData.company.physicalAddress?.countryCode || "USA",
 				dateLastContacted: new Date().toISOString(),
 				notes: `Initial contact created during company setup. Role: ${setupData.user.role}`,
+				companyId,
 			};
 
 			const contactResponse = await client.models.Contact.create(contactData);
@@ -102,12 +74,52 @@ export function SetupReview({ setupData, onBack }) {
 			}
 			const contactId = contactResponse.data.id;
 
-			// 4. Create team member
-			console.log("Creating team member...");
+			// 3. Create user if Cognito ID is provided
+			let userId = setupData.user.cognitoId;
+			if (userId) {
+				console.log("Creating user...");
+				const userData = {
+					cognitoId: userId,
+					email: setupData.user.contactEmail,
+					name: `${setupData.user.firstName} ${setupData.user.lastName}`.trim(),
+					phone: setupData.user.contactMobilePhone || null,
+					status: "ACTIVE",
+					lastLogin: new Date().toISOString(),
+				};
+
+				const userResponse = await client.models.User.create(userData);
+				console.log("User created:", userResponse);
+
+				if (!userResponse?.data?.id) {
+					throw new Error("Failed to create user");
+				}
+				userId = userResponse.data.id;
+
+				// Update contact with user ID
+				await client.models.Contact.update({
+					id: contactId,
+					userId,
+				});
+
+				// Create user-company role
+				console.log("Creating user-company role...");
+				const userCompanyRoleData = {
+					userId,
+					companyId,
+					roleId: "ADMIN",
+					status: "ACTIVE",
+				};
+
+				await client.models.UserCompanyRole.create(userCompanyRoleData);
+				console.log("UserCompanyRole created");
+			}
+
+			// 4. Create team
+			console.log("Creating team...");
 			const teamData = {
+				name: "Management Team",
+				description: "Primary management team for the company",
 				companyId,
-				contactId,
-				role: setupData.user.role,
 			};
 
 			const teamResponse = await client.models.Team.create(teamData);
@@ -116,22 +128,20 @@ export function SetupReview({ setupData, onBack }) {
 			if (!teamResponse?.data?.id) {
 				throw new Error("Failed to create team");
 			}
+			const teamId = teamResponse.data.id;
 
-			// 5. Create user-company role
-			console.log("Creating user-company role...");
-			const userCompanyRoleData = {
-				userId,
-				companyId,
-				roleId: "ADMIN",
+			// 5. Create team member
+			console.log("Creating team member...");
+			const teamMemberData = {
+				teamId,
+				contactId,
+				role: setupData.user.role,
 				status: "ACTIVE",
+				notes: "Initial team member created during company setup",
 			};
 
-			const userCompanyRoleResponse = await client.models.UserCompanyRole.create(userCompanyRoleData);
-			console.log("UserCompanyRole created:", userCompanyRoleResponse);
-
-			if (!userCompanyRoleResponse?.data?.id) {
-				throw new Error("Failed to create user-company role");
-			}
+			await client.models.TeamMember.create(teamMemberData);
+			console.log("Team member created");
 
 			setSuccess(true);
 			console.log("Setup completed successfully!");
@@ -174,16 +184,16 @@ export function SetupReview({ setupData, onBack }) {
 				<Typography>
 					<strong>Physical Address:</strong>
 					<br />
-					{setupData.company.physicalAddress?.addressLine1}
-					{setupData.company.physicalAddress?.addressLine2 && (
+					{setupData.company.shippingAddress?.addressLine1}
+					{setupData.company.shippingAddress?.addressLine2 && (
 						<>
 							<br />
-							{setupData.company.physicalAddress.addressLine2}
+							{setupData.company.shippingAddress.addressLine2}
 						</>
 					)}
 					<br />
-					{setupData.company.physicalAddress?.city}, {setupData.company.physicalAddress?.stateOrProvinceCode}{" "}
-					{setupData.company.physicalAddress?.zipCode}
+					{setupData.company.shippingAddress?.city}, {setupData.company.shippingAddress?.stateOrProvinceCode}{" "}
+					{setupData.company.shippingAddress?.zipCode}
 				</Typography>
 
 				<Divider sx={{ my: 2 }} />
@@ -209,6 +219,9 @@ export function SetupReview({ setupData, onBack }) {
 				</Typography>
 				<Typography>
 					<strong>Title:</strong> {setupData.user.title || "-"}
+				</Typography>
+				<Typography>
+					<strong>Cognito ID:</strong> {setupData.user.cognitoId || "Not provided"}
 				</Typography>
 
 				{error && (
@@ -239,5 +252,3 @@ export function SetupReview({ setupData, onBack }) {
 		</Box>
 	);
 }
-
-export default SetupReview;

@@ -17,18 +17,17 @@ export const useTeamStore = create((set, get) => ({
 			// First fetch all teams for the company
 			const subscription = client.models.Team.observeQuery({
 				filter: { companyId: { eq: companyId } },
+				include: {
+					members: {
+						include: {
+							contact: true,
+						},
+					},
+				},
 			}).subscribe({
-				next: async ({ items }) => {
-					// For each team, fetch the associated contact details
-					const teamsWithContacts = await Promise.all(
-						items.map(async (team) => {
-							const contact = await client.models.Contact.get({ id: team.contactId });
-							return { ...team, contact };
-						})
-					);
-
+				next: ({ items }) => {
 					set({
-						teams: teamsWithContacts,
+						teams: items,
 						loading: false,
 					});
 				},
@@ -44,36 +43,23 @@ export const useTeamStore = create((set, get) => ({
 		}
 	},
 
-	addTeam: async ({ companyId, role, contact }) => {
+	addTeam: async ({ companyId, name, description }) => {
 		set({ loading: true });
 		try {
-			// First create the contact
-			const newContact = await client.models.Contact.create({
-				firstName: contact.firstName,
-				lastName: contact.lastName,
-				title: contact.title,
-				department: contact.department,
-				contactEmail: contact.contactEmail,
-				contactMobilePhone: contact.contactMobilePhone,
-				contactBusinessPhone: contact.contactBusinessPhone,
-			});
-
-			// Then create the team member with the contact ID
+			// Create the team
 			const team = await client.models.Team.create({
 				companyId,
-				contactId: newContact.id,
-				role,
+				name,
+				description,
 			});
 
-			const teamWithContact = { ...team, contact: newContact };
-
 			set((state) => ({
-				teams: [...state.teams, teamWithContact],
+				teams: [...state.teams, team],
 				loading: false,
 				error: null,
 			}));
 
-			return teamWithContact;
+			return team;
 		} catch (err) {
 			console.error("Create team error:", err);
 			set({ error: err.message || "Failed to create team", loading: false });
@@ -81,35 +67,55 @@ export const useTeamStore = create((set, get) => ({
 		}
 	},
 
-	updateTeam: async (id, updates) => {
+	addTeamMember: async ({ teamId, contactId, role }) => {
+		set({ loading: true });
 		try {
-			const team = await client.models.Team.get({ id });
-			if (!team) throw new Error("Team not found");
-
-			// Update contact information
-			if (updates.contact) {
-				await client.models.Contact.update({
-					id: team.contactId,
-					...updates.contact,
-				});
-			}
-
-			// Update team information
-			const updatedTeam = await client.models.Team.update({
-				id,
-				role: updates.role,
+			const teamMember = await client.models.TeamMember.create({
+				teamId,
+				contactId,
+				role,
+				status: "ACTIVE",
 			});
 
-			// Fetch updated contact
-			const updatedContact = await client.models.Contact.get({ id: team.contactId });
-			const teamWithContact = { ...updatedTeam, contact: updatedContact };
+			// Refresh the teams to get updated data
+			const team = await client.models.Team.get({
+				id: teamId,
+				include: {
+					members: {
+						include: {
+							contact: true,
+						},
+					},
+				},
+			});
 
 			set((state) => ({
-				teams: state.teams.map((t) => (t.id === id ? teamWithContact : t)),
+				teams: state.teams.map((t) => (t.id === teamId ? team : t)),
+				loading: false,
 				error: null,
 			}));
 
-			return teamWithContact;
+			return teamMember;
+		} catch (err) {
+			console.error("Add team member error:", err);
+			set({ error: err.message || "Failed to add team member", loading: false });
+			throw err;
+		}
+	},
+
+	updateTeam: async (id, updates) => {
+		try {
+			const updatedTeam = await client.models.Team.update({
+				id,
+				...updates,
+			});
+
+			set((state) => ({
+				teams: state.teams.map((t) => (t.id === id ? updatedTeam : t)),
+				error: null,
+			}));
+
+			return updatedTeam;
 		} catch (err) {
 			console.error("Error updating team:", err);
 			set({ error: "Failed to update team" });
@@ -117,15 +123,80 @@ export const useTeamStore = create((set, get) => ({
 		}
 	},
 
+	updateTeamMember: async (teamMemberId, updates) => {
+		try {
+			const updatedMember = await client.models.TeamMember.update({
+				id: teamMemberId,
+				...updates,
+			});
+
+			// Refresh the teams to get updated data
+			const team = await client.models.Team.get({
+				id: updatedMember.teamId,
+				include: {
+					members: {
+						include: {
+							contact: true,
+						},
+					},
+				},
+			});
+
+			set((state) => ({
+				teams: state.teams.map((t) => (t.id === updatedMember.teamId ? team : t)),
+				error: null,
+			}));
+
+			return updatedMember;
+		} catch (err) {
+			console.error("Error updating team member:", err);
+			set({ error: "Failed to update team member" });
+			throw err;
+		}
+	},
+
+	removeTeamMember: async (teamMemberId) => {
+		try {
+			const teamMember = await client.models.TeamMember.get({ id: teamMemberId });
+			if (!teamMember) throw new Error("Team member not found");
+
+			await client.models.TeamMember.delete({ id: teamMemberId });
+
+			// Refresh the teams to get updated data
+			const team = await client.models.Team.get({
+				id: teamMember.teamId,
+				include: {
+					members: {
+						include: {
+							contact: true,
+						},
+					},
+				},
+			});
+
+			set((state) => ({
+				teams: state.teams.map((t) => (t.id === teamMember.teamId ? team : t)),
+				error: null,
+			}));
+		} catch (err) {
+			console.error("Error removing team member:", err);
+			set({ error: "Failed to remove team member" });
+			throw err;
+		}
+	},
+
 	removeTeam: async (id) => {
 		try {
-			const team = await client.models.Team.get({ id });
-			if (!team) throw new Error("Team not found");
+			// First remove all team members
+			const teamMembers = await client.models.TeamMember.list({
+				filter: { teamId: { eq: id } },
+			});
 
-			// Delete the contact first
-			await client.models.Contact.delete({ id: team.contactId });
+			for (const member of teamMembers.data) {
+				await client.models.TeamMember.delete({ id: member.id });
+			}
 
-			// Then delete the team
+			// Then remove the team
 			await client.models.Team.delete({ id });
 
 			set((state) => ({

@@ -31,6 +31,7 @@ export function CompanySearch({ onCompanySelect }) {
 			console.log("Raw entity data:", entityData);
 			console.log("Formatted company data:", formattedData);
 			setSearchResult(formattedData);
+			console.log(formattedData);
 		} catch (err) {
 			console.error("Search error:", err);
 			setError(err.message || "Failed to fetch company information. Please verify the UEI and try again.");
