@@ -1,67 +1,14 @@
-import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
-import { type DefaultAuthorizationMode } from "@aws-amplify/backend-data";
-
-const AUTH_TYPES = [
-	"GOVLYNK_ADMIN",
-	"GOVLYNK_CONSULTANT",
-	"GOVLYNK_USER",
-	"COMPANY_ADMIN",
-	"COMPANY_USER",
-	"VIEWER",
-] as const;
-
-const COMPANY_ROLES = [
-	"Executive",
-	"Sales",
-	"Marketing",
-	"Finance",
-	"Risk",
-	"Technology",
-	"Engineering",
-	"Operations",
-	"Human Resources",
-	"Legal",
-	"Contracting",
-	"Servicing",
-	"Other",
-] as const;
-
 const schema = a.schema({
 	User: a
 		.model({
 			cognitoId: a.string().required(),
-			fullName: a.string().required(),
 			email: a.email().required(),
+			name: a.string().required(),
 			phone: a.string(),
 			status: a.enum(["ACTIVE", "INACTIVE"]),
-			companyName: a.string().array(),
-			uei: a.string().array(),
-			auth: a.enum(AUTH_TYPES),
 			lastLogin: a.datetime(),
-			contact: a.belongsTo("Contact"),
+			companies: a.hasMany("UserCompanyRole", "userId"),
 			todos: a.hasMany("Todo", "assigneeId"),
-		})
-		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
-
-	Contact: a
-		.model({
-			firstName: a.string().required(),
-			lastName: a.string().required(),
-			title: a.string(),
-			department: a.string(),
-			contactEmail: a.email(),
-			contactMobilePhone: a.string(),
-			contactBusinessPhone: a.string(),
-			workAddressStreetLine1: a.string(),
-			workAddressStreetLine2: a.string(),
-			workAddressCity: a.string(),
-			workAddressStateCode: a.string(),
-			workAddressZipCode: a.string(),
-			workAddressCountryCode: a.string(),
-			notes: a.string(),
-			role: a.enum(COMPANY_ROLES),
-			user: a.hasOne("User", "contactId"),
-			teams: a.hasMany("Team", "contactId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
@@ -86,9 +33,9 @@ const schema = a.schema({
 			userId: a.string().required(),
 			companyId: a.string().required(),
 			roleId: a.string().required(),
-			user: a.belongsTo("User"),
-			company: a.belongsTo("Company"),
 			status: a.enum(["ACTIVE", "INACTIVE"]),
+			user: a.belongsTo("User", "userId"),
+			company: a.belongsTo("Company", "companyId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
