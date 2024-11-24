@@ -120,6 +120,16 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 						<TextField
 							fullWidth
+							label='Cognito Id'
+							name='cognitoId'
+							value={formData.cognitoId}
+							onChange={handleChange}
+							error={!!errors.cognitoId}
+							helperText={errors.cognitoId}
+							required
+						/>
+						<TextField
+							fullWidth
 							label='First Name'
 							name='firstName'
 							value={formData.firstName}

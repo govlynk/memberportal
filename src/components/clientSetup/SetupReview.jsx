@@ -54,10 +54,14 @@ export function SetupReview({ setupData, onBack }) {
 			// 2. Create user
 			console.log("Creating user...");
 			const userData = {
-				cognitoId: currentUser.sub,
+				cognitoId: setupData.user.cognitoId,
 				email: setupData.user.contactEmail,
 				name: `${setupData.user.firstName} ${setupData.user.lastName}`.trim(),
 				phone: setupData.user.contactMobilePhone || null,
+
+				companies: [companyId],
+
+				// companies: [setupData.company.uei],
 				status: "ACTIVE",
 				lastLogin: new Date().toISOString(),
 			};
