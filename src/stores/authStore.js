@@ -1,53 +1,146 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { generateClient } from "aws-amplify/data";
+
+const client = generateClient({
+	authMode: "userPool",
+});
 
 export const useAuthStore = create()(
-  persist(
-    (set) => ({
-      user: null,
-      isAuthenticated: false,
-      isAdmin: false,
-      groups: [],
+	persist(
+		(set, get) => ({
+			user: null,
+			isAuthenticated: false,
+			isAdmin: false,
+			groups: [],
+			authDetails: null,
 
-      initialize: (userData) => {
-        if (!userData) return;
+			initialize: async (cognitoUser) => {
+				if (!cognitoUser) return;
 
-        // Extract groups from Cognito token
-        const groups = userData.signInUserSession?.accessToken?.payload?.['cognito:groups'] || [];
-        const isAdmin = groups.some(group => 
-          typeof group === 'string' && group.toLowerCase() === 'admin'
-        );
+				try {
+					// Extract basic auth information
+					const authInfo = {
+						username: cognitoUser.username,
+						userId: cognitoUser.userId,
+						loginId: cognitoUser.signInDetails?.loginId,
+						authFlowType: cognitoUser.signInDetails?.authFlowType,
+					};
 
-        // Create a normalized user object with all necessary fields
-        const user = {
-          sub: userData.userId || userData.attributes?.sub || userData.username,
-          email: userData.attributes?.email || userData.email,
-          name: userData.attributes?.name || userData.username,
-          username: userData.username,
-          groups: groups,
-          attributes: userData.attributes || {},
-          signInUserSession: userData.signInUserSession
-        };
+					// Extract groups from Cognito token
+					const groups = cognitoUser.signInUserSession?.accessToken?.payload?.["cognito:groups"] || [];
+					const isAdmin = groups.some((group) => typeof group === "string" && group.toLowerCase() === "admin");
 
-        set({
-          user,
-          isAuthenticated: true,
-          isAdmin,
-          groups
-        });
-      },
+					// Fetch user data from database using the correct ID
+					const { data: users } = await client.models.User.list({
+						filter: { cognitoId: { eq: cognitoUser.userId } },
+						limit: 1,
+					});
 
-      reset: () => {
-        set({
-          user: null,
-          isAuthenticated: false,
-          isAdmin: false,
-          groups: []
-        });
-      },
-    }),
-    {
-      name: 'auth-storage',
-    }
-  )
+					let userData = users?.[0];
+
+					if (!userData) {
+						// Create new user if doesn't exist
+						const { data: newUser } = await client.models.User.create({
+							cognitoId: cognitoUser.userId,
+							email: cognitoUser.signInDetails?.loginId || "",
+							name: cognitoUser.username,
+							status: "ACTIVE",
+							lastLogin: new Date().toISOString(),
+						});
+						userData = newUser;
+					} else {
+						// Update last login
+						const { data: updatedUser } = await client.models.User.update({
+							id: userData.id,
+							lastLogin: new Date().toISOString(),
+						});
+						userData = updatedUser;
+					}
+
+					// Fetch user's company associations
+					const { data: userCompanyRoles } = await client.models.UserCompanyRole.list({
+						filter: { userId: { eq: userData.id } },
+						include: {
+							company: true,
+							role: true,
+						},
+					});
+
+					// Create normalized user object
+					const normalizedUser = {
+						...userData,
+						groups,
+						companies:
+							userCompanyRoles?.map((ucr) => ({
+								...ucr.company,
+								roleId: ucr.roleId,
+								userCompanyRoleId: ucr.id,
+								status: ucr.status,
+							})) || [],
+						authDetails: authInfo,
+						signInUserSession: cognitoUser.signInUserSession,
+					};
+
+					set({
+						user: normalizedUser,
+						isAuthenticated: true,
+						isAdmin,
+						groups,
+						authDetails: authInfo,
+					});
+				} catch (err) {
+					console.error("Error initializing auth:", err);
+					set({
+						error: "Failed to initialize authentication",
+						isAuthenticated: false,
+						user: null,
+						groups: [],
+						authDetails: null,
+					});
+				}
+			},
+
+			updateUserProfile: async (updates) => {
+				const currentUser = get().user;
+				if (!currentUser?.id) return;
+
+				try {
+					const { data: updatedUser } = await client.models.User.update({
+						id: currentUser.id,
+						...updates,
+					});
+
+					set((state) => ({
+						user: {
+							...state.user,
+							...updatedUser,
+						},
+					}));
+				} catch (err) {
+					console.error("Error updating user profile:", err);
+					throw new Error("Failed to update user profile");
+				}
+			},
+
+			reset: () => {
+				set({
+					user: null,
+					isAuthenticated: false,
+					isAdmin: false,
+					groups: [],
+					authDetails: null,
+				});
+			},
+		}),
+		{
+			name: "auth-storage",
+			partialize: (state) => ({
+				isAuthenticated: state.isAuthenticated,
+				isAdmin: state.isAdmin,
+				groups: state.groups,
+				authDetails: state.authDetails,
+			}),
+		}
+	)
 );

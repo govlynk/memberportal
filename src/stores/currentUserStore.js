@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { generateClient } from "aws-amplify/data";
 
-const client = generateClient();
+const client = generateClient({
+	authMode: "userPool",
+});
 
 export const useCurrentUserStore = create((set) => ({
 	currentUser: null,
@@ -18,57 +20,67 @@ export const useCurrentUserStore = create((set) => ({
 
 		set({ loading: true });
 		try {
-			// Fetch user data from the database
-			const userData = await client.models.User.get({ id: cognitoUser.sub });
-
 			// Extract groups from Cognito token
-			const groups = userData.signInUserSession?.accessToken?.payload?.["cognito:groups"] || [];
+			const groups = cognitoUser.signInUserSession?.accessToken?.payload?.["cognito:groups"] || [];
 			const isAdmin = groups.some((group) => typeof group === "string" && group.toLowerCase() === "admin");
+
+			// Fetch or create user in the database
+			let userData = await client.models.User.get({ id: cognitoUser.sub });
 
 			if (!userData) {
 				// Create new user if doesn't exist
-				const newUser = await client.models.User.create({
+				userData = await client.models.User.create({
 					cognitoId: cognitoUser.sub,
 					email: cognitoUser.email,
 					name: cognitoUser.name || cognitoUser.username,
 					status: "ACTIVE",
 					lastLogin: new Date().toISOString(),
 				});
-				set({ currentUser: newUser, loading: false });
-				return;
+			} else {
+				// Update last login
+				userData = await client.models.User.update({
+					id: userData.id,
+					lastLogin: new Date().toISOString(),
+				});
 			}
 
-			// Update last login
-			const updatedUser = await client.models.User.update({
-				id: userData.id,
-				lastLogin: new Date().toISOString(),
+			// Fetch user's company associations with roles
+			const userCompanyRoles = await client.models.UserCompanyRole.list({
+				filter: { userId: { eq: userData.id } },
+				include: {
+					company: true,
+					role: true,
+				},
 			});
 
-			// Fetch user's companies and roles
-			const userCompanyRoles = await client.models.UserCompanyRole.query({
-				userId: { eq: updatedUser.id },
-			});
-
-			const companies = await Promise.all(
-				userCompanyRoles.data.map(async (ucr) => {
-					const company = await client.models.Company.get({ id: ucr.companyId });
-					const role = await client.models.Role.get({ id: ucr.roleId });
-					return { ...company, role };
-				})
-			);
+			// Process company and role data
+			const companies = userCompanyRoles.data.map((ucr) => ({
+				...ucr.company,
+				roleId: ucr.roleId,
+				userCompanyRoleId: ucr.id,
+				status: ucr.status,
+			}));
 
 			set({
-				currentUser: updatedUser,
+				currentUser: {
+					...userData,
+					groups,
+					companies,
+				},
 				isAuthenticated: true,
 				isAdmin,
 				groups,
 				userCompanies: companies,
 				userRoles: userCompanyRoles.data.map((ucr) => ucr.role),
 				loading: false,
+				error: null,
 			});
 		} catch (err) {
 			console.error("Error initializing current user:", err);
-			set({ error: "Failed to initialize user data", loading: false });
+			set({
+				error: "Failed to initialize user data",
+				loading: false,
+			});
 		}
 	},
 
@@ -79,13 +91,21 @@ export const useCurrentUserStore = create((set) => ({
 				id: updates.id,
 				...updates,
 			});
+
 			set((state) => ({
-				currentUser: { ...state.currentUser, ...updatedUser },
+				currentUser: {
+					...state.currentUser,
+					...updatedUser,
+				},
 				loading: false,
+				error: null,
 			}));
 		} catch (err) {
 			console.error("Error updating current user:", err);
-			set({ error: "Failed to update user data", loading: false });
+			set({
+				error: "Failed to update user data",
+				loading: false,
+			});
 		}
 	},
 

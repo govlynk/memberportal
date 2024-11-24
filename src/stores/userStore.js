@@ -22,12 +22,18 @@ export const useUserStore = create((set, get) => ({
 							role: true,
 						},
 					},
+					todos: {
+						include: {
+							assignee: true,
+						},
+					},
 				},
 			}).subscribe({
 				next: ({ items }) => {
 					set({
 						users: items,
 						loading: false,
+						error: null,
 					});
 				},
 				error: (err) => {
@@ -35,6 +41,7 @@ export const useUserStore = create((set, get) => ({
 					set({ error: "Failed to fetch users", loading: false });
 				},
 			});
+
 			set({ subscription });
 		} catch (err) {
 			console.error("Fetch users error:", err);
@@ -45,11 +52,16 @@ export const useUserStore = create((set, get) => ({
 	addUser: async (userData) => {
 		set({ loading: true });
 		try {
+			// Validate required fields
+			if (!userData.cognitoId || !userData.email || !userData.name) {
+				throw new Error("Missing required fields: cognitoId, email, or name");
+			}
+
 			const user = await client.models.User.create({
 				cognitoId: userData.cognitoId,
-				email: userData.email,
+				email: userData.email.toLowerCase(),
 				name: userData.name,
-				phone: userData.phone,
+				phone: userData.phone || null,
 				status: userData.status || "ACTIVE",
 				lastLogin: new Date().toISOString(),
 			});
@@ -69,25 +81,30 @@ export const useUserStore = create((set, get) => ({
 	},
 
 	updateUser: async (id, updates) => {
+		set({ loading: true });
 		try {
 			const updatedUser = await client.models.User.update({
 				id,
 				...updates,
+				lastLogin: updates.lastLogin || new Date().toISOString(),
 			});
 
 			set((state) => ({
 				users: state.users.map((user) => (user.id === id ? updatedUser : user)),
+				loading: false,
 				error: null,
 			}));
+
 			return updatedUser;
 		} catch (err) {
 			console.error("Error updating user:", err);
-			set({ error: "Failed to update user" });
+			set({ error: "Failed to update user", loading: false });
 			throw err;
 		}
 	},
 
 	removeUser: async (id) => {
+		set({ loading: true });
 		try {
 			// First get all UserCompanyRole associations for this user
 			const userCompanyRoles = await client.models.UserCompanyRole.list({
@@ -99,13 +116,17 @@ export const useUserStore = create((set, get) => ({
 				await client.models.UserCompanyRole.delete({ id: role.id });
 			}
 
-			// Delete all todos assigned to this user
+			// Get and update all todos assigned to this user
 			const todos = await client.models.Todo.list({
 				filter: { assigneeId: { eq: id } },
 			});
 
+			// Update todos to remove assignee
 			for (const todo of todos.data) {
-				await client.models.Todo.delete({ id: todo.id });
+				await client.models.Todo.update({
+					id: todo.id,
+					assigneeId: null,
+				});
 			}
 
 			// Finally delete the user
@@ -113,13 +134,28 @@ export const useUserStore = create((set, get) => ({
 
 			set((state) => ({
 				users: state.users.filter((user) => user.id !== id),
+				loading: false,
 				error: null,
 			}));
 		} catch (err) {
 			console.error("Error removing user:", err);
-			set({ error: "Failed to remove user" });
+			set({ error: "Failed to remove user", loading: false });
 			throw err;
 		}
+	},
+
+	getUserById: (id) => {
+		return get().users.find((user) => user.id === id);
+	},
+
+	getUserCompanies: (userId) => {
+		const user = get().users.find((u) => u.id === userId);
+		return user?.companies?.items || [];
+	},
+
+	getUserTodos: (userId) => {
+		const user = get().users.find((u) => u.id === userId);
+		return user?.todos?.items || [];
 	},
 
 	cleanup: () => {

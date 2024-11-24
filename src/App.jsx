@@ -9,6 +9,7 @@ function App({ user, signOut }) {
 	useEffect(() => {
 		if (user) {
 			initializeAuth(user);
+			console.log("User authenticated:", user);
 		}
 	}, [user, initializeAuth]);
 
