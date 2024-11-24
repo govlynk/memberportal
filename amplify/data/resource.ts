@@ -19,7 +19,7 @@ const COMPANY_ROLES = [
 	"Technology",
 	"Engineering",
 	"Operations",
-	"Human Resources",
+	"HumanResources",
 	"Legal",
 	"Contracting",
 	"Servicing",
