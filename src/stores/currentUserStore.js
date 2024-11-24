@@ -1,148 +1,81 @@
 import { create } from "zustand";
 import { generateClient } from "aws-amplify/data";
-
-const client = generateClient({
-	authMode: "userPool",
-});
-
-export const useTeamStore = create((set, get) => ({
-	teams: [],
+const client = generateClient();
+export const useCurrentUserStore = create((set) => ({
+	currentUser: null,
+	userCompanies: [],
+	userRoles: [],
 	loading: false,
 	error: null,
-	subscription: null,
-
-	fetchTeams: async (companyId) => {
+	initializeCurrentUser: async (cognitoUser) => {
+		if (!cognitoUser?.sub) return;
 		set({ loading: true });
 		try {
-			// First fetch all teams for the company
-			const subscription = client.models.Team.observeQuery({
-				filter: { companyId: { eq: companyId } },
-			}).subscribe({
-				next: async ({ items }) => {
-					// For each team, fetch the associated contact details
-					const teamsWithContacts = await Promise.all(
-						items.map(async (team) => {
-							const contact = await client.models.Contact.get({ id: team.contactId });
-							return { ...team, contact };
-						})
-					);
+			// Fetch user data from the database
+			const userData = await client.models.User.get({ id: cognitoUser.sub });
 
-					set({
-						teams: teamsWithContacts,
-						loading: false,
-					});
-				},
-				error: (err) => {
-					console.error("Fetch teams error:", err);
-					set({ error: "Failed to fetch teams", loading: false });
-				},
-			});
-			set({ subscription });
-		} catch (err) {
-			console.error("Fetch teams error:", err);
-			set({ error: "Failed to fetch teams", loading: false });
-		}
-	},
-
-	addTeam: async ({ companyId, role, contact }) => {
-		set({ loading: true });
-		try {
-			// First create the contact
-			const newContact = await client.models.Contact.create({
-				firstName: contact.firstName,
-				lastName: contact.lastName,
-				title: contact.title,
-				department: contact.department,
-				contactEmail: contact.contactEmail,
-				contactMobilePhone: contact.contactMobilePhone,
-				contactBusinessPhone: contact.contactBusinessPhone,
-			});
-
-			// Then create the team member with the contact ID
-			const team = await client.models.Team.create({
-				companyId,
-				contactId: newContact.id,
-				role,
-			});
-
-			const teamWithContact = { ...team, contact: newContact };
-
-			set((state) => ({
-				teams: [...state.teams, teamWithContact],
-				loading: false,
-				error: null,
-			}));
-
-			return teamWithContact;
-		} catch (err) {
-			console.error("Create team error:", err);
-			set({ error: err.message || "Failed to create team", loading: false });
-			throw err;
-		}
-	},
-
-	updateTeam: async (id, updates) => {
-		try {
-			const team = await client.models.Team.get({ id });
-			if (!team) throw new Error("Team not found");
-
-			// Update contact information
-			if (updates.contact) {
-				await client.models.Contact.update({
-					id: team.contactId,
-					...updates.contact,
+			if (!userData) {
+				// Create new user if doesn't exist
+				const newUser = await client.models.User.create({
+					cognitoId: cognitoUser.sub,
+					email: cognitoUser.email,
+					name: cognitoUser.name || cognitoUser.username,
+					status: "ACTIVE",
+					lastLogin: new Date().toISOString(),
 				});
+				set({ currentUser: newUser, loading: false });
+				return;
 			}
-
-			// Update team information
-			const updatedTeam = await client.models.Team.update({
-				id,
-				role: updates.role,
+			// Update last login
+			const updatedUser = await client.models.User.update({
+				id: userData.id,
+				lastLogin: new Date().toISOString(),
 			});
-
-			// Fetch updated contact
-			const updatedContact = await client.models.Contact.get({ id: team.contactId });
-			const teamWithContact = { ...updatedTeam, contact: updatedContact };
-
-			set((state) => ({
-				teams: state.teams.map((t) => (t.id === id ? teamWithContact : t)),
-				error: null,
-			}));
-
-			return teamWithContact;
+			// Fetch user's companies and roles
+			const userCompanyRoles = await client.models.UserCompanyRole.query({
+				userId: { eq: updatedUser.id },
+			});
+			const companies = await Promise.all(
+				userCompanyRoles.data.map(async (ucr) => {
+					const company = await client.models.Company.get({ id: ucr.companyId });
+					const role = await client.models.Role.get({ id: ucr.roleId });
+					return { ...company, role };
+				})
+			);
+			set({
+				currentUser: updatedUser,
+				userCompanies: companies,
+				userRoles: userCompanyRoles.data.map((ucr) => ucr.role),
+				loading: false,
+			});
 		} catch (err) {
-			console.error("Error updating team:", err);
-			set({ error: "Failed to update team" });
-			throw err;
+			console.error("Error initializing current user:", err);
+			set({ error: "Failed to initialize user data", loading: false });
 		}
 	},
-
-	removeTeam: async (id) => {
+	updateCurrentUser: async (updates) => {
+		set({ loading: true });
 		try {
-			const team = await client.models.Team.get({ id });
-			if (!team) throw new Error("Team not found");
-
-			// Delete the contact first
-			await client.models.Contact.delete({ id: team.contactId });
-
-			// Then delete the team
-			await client.models.Team.delete({ id });
-
+			const updatedUser = await client.models.User.update({
+				id: updates.id,
+				...updates,
+			});
 			set((state) => ({
-				teams: state.teams.filter((t) => t.id !== id),
-				error: null,
+				currentUser: { ...state.currentUser, ...updatedUser },
+				loading: false,
 			}));
 		} catch (err) {
-			console.error("Error removing team:", err);
-			set({ error: "Failed to remove team" });
-			throw err;
+			console.error("Error updating current user:", err);
+			set({ error: "Failed to update user data", loading: false });
 		}
 	},
-
-	cleanup: () => {
-		const { subscription } = get();
-		if (subscription) {
-			subscription.unsubscribe();
-		}
+	reset: () => {
+		set({
+			currentUser: null,
+			userCompanies: [],
+			userRoles: [],
+			loading: false,
+			error: null,
+		});
 	},
 }));
