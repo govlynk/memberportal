@@ -40,6 +40,27 @@ const schema = a.schema({
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
+	Contact: a
+		.model({
+			firstName: a.string().required(),
+			lastName: a.string().required(),
+			title: a.string(),
+			department: a.string(),
+			contactEmail: a.email(),
+			contactMobilePhone: a.string(),
+			contactBusinessPhone: a.string(),
+			workAddressStreetLine1: a.string(),
+			workAddressStreetLine2: a.string(),
+			workAddressCity: a.string(),
+			workAddressStateCode: a.string(),
+			workAddressZipCode: a.string(),
+			workAddressCountryCode: a.string(),
+			dateLastContacted: a.datetime(),
+			notes: a.string(),
+			teams: a.hasMany("Team", "contactId"),
+		})
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
+
 	Company: a
 		.model({
 			legalBusinessName: a.string().required(),
