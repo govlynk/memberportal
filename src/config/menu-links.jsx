@@ -35,7 +35,7 @@ export const menuLinks = [
 			},
 			{
 				title: "SAM Registration",
-				path: "/verify-sam",
+				path: "/sam",
 			},
 		],
 	},

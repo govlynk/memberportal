@@ -33,8 +33,8 @@ export function SetupReview({ setupData, onBack }) {
 				uei: setupData.company.uei,
 				cageCode: setupData.company.cageCode || null,
 				ein: setupData.company.ein || null,
-				companyEmail: setupData.user.email || null,
-				companyPhoneNumber: setupData.user.phone || null,
+				companyEmail: setupData.user.contactEmail || null,
+				companyPhoneNumber: setupData.user.contactBusinessPhone || null,
 				companyWebsite: setupData.company.entityURL
 					? setupData.company.entityURL.startsWith("http")
 						? setupData.company.entityURL
@@ -55,9 +55,9 @@ export function SetupReview({ setupData, onBack }) {
 			console.log("Creating user...");
 			const userData = {
 				cognitoId: currentUser.sub,
-				email: setupData.user.email,
+				email: setupData.user.contactEmail,
 				name: `${setupData.user.firstName} ${setupData.user.lastName}`.trim(),
-				phone: setupData.user.phone || null,
+				phone: setupData.user.contactMobilePhone || null,
 				status: "ACTIVE",
 				lastLogin: new Date().toISOString(),
 			};
@@ -77,9 +77,9 @@ export function SetupReview({ setupData, onBack }) {
 				lastName: setupData.user.lastName,
 				title: setupData.user.title || null,
 				department: setupData.user.department || null,
-				contactEmail: setupData.user.email,
-				contactMobilePhone: setupData.user.phone || null,
-				contactBusinessPhone: setupData.user.phone || null,
+				contactEmail: setupData.user.contactEmail,
+				contactMobilePhone: setupData.user.contactMobilePhone || null,
+				contactBusinessPhone: setupData.user.contactBusinessPhone || null,
 				workAddressStreetLine1: setupData.company.physicalAddress?.addressLine1 || null,
 				workAddressStreetLine2: setupData.company.physicalAddress?.addressLine2 || null,
 				workAddressCity: setupData.company.physicalAddress?.city || null,
@@ -87,7 +87,7 @@ export function SetupReview({ setupData, onBack }) {
 				workAddressZipCode: setupData.company.physicalAddress?.zipCode || null,
 				workAddressCountryCode: setupData.company.physicalAddress?.countryCode || "USA",
 				dateLastContacted: new Date().toISOString(),
-				notes: `Initial contact created during company setup. Role: ${setupData.user.companyRole}`,
+				notes: `Initial contact created during company setup. Role: ${setupData.user.role}`,
 			};
 
 			const contactResponse = await client.models.Contact.create(contactData);
@@ -101,9 +101,9 @@ export function SetupReview({ setupData, onBack }) {
 			// 4. Create team member
 			console.log("Creating team member...");
 			const teamData = {
-				companyId: companyId,
-				contactId: contactId,
-				role: setupData.user.companyRole || "EXECUTIVE",
+				companyId,
+				contactId,
+				role: setupData.user.role,
 			};
 
 			const teamResponse = await client.models.Team.create(teamData);
@@ -116,8 +116,8 @@ export function SetupReview({ setupData, onBack }) {
 			// 5. Create user-company role
 			console.log("Creating user-company role...");
 			const userCompanyRoleData = {
-				userId: userId,
-				companyId: companyId,
+				userId,
+				companyId,
 				roleId: "ADMIN",
 				status: "ACTIVE",
 			};
@@ -158,13 +158,28 @@ export function SetupReview({ setupData, onBack }) {
 					<strong>CAGE Code:</strong> {setupData.company.cageCode || "-"}
 				</Typography>
 				<Typography>
-					<strong>Company Email:</strong> {setupData.user.email || "-"}
+					<strong>Company Email:</strong> {setupData.user.contactEmail || "-"}
 				</Typography>
 				<Typography>
-					<strong>Company Phone Number:</strong> {setupData.user.phone || "-"}
+					<strong>Company Phone Number:</strong> {setupData.user.contactBusinessPhone || "-"}
 				</Typography>
 				<Typography>
 					<strong>Company Website:</strong> {setupData.company.entityURL || "-"}
+				</Typography>
+
+				<Typography>
+					<strong>Physical Address:</strong>
+					<br />
+					{setupData.company.physicalAddress?.addressLine1}
+					{setupData.company.physicalAddress?.addressLine2 && (
+						<>
+							<br />
+							{setupData.company.physicalAddress.addressLine2}
+						</>
+					)}
+					<br />
+					{setupData.company.physicalAddress?.city}, {setupData.company.physicalAddress?.stateOrProvinceCode}{" "}
+					{setupData.company.physicalAddress?.zipCode}
 				</Typography>
 
 				<Divider sx={{ my: 2 }} />
@@ -174,13 +189,16 @@ export function SetupReview({ setupData, onBack }) {
 					<strong>Name:</strong> {`${setupData.user.firstName} ${setupData.user.lastName}`}
 				</Typography>
 				<Typography>
-					<strong>Email:</strong> {setupData.user.email}
+					<strong>Email:</strong> {setupData.user.contactEmail}
 				</Typography>
 				<Typography>
-					<strong>Phone:</strong> {setupData.user.phone || "-"}
+					<strong>Mobile Phone:</strong> {setupData.user.contactMobilePhone || "-"}
 				</Typography>
 				<Typography>
-					<strong>Role:</strong> {setupData.user.companyRole}
+					<strong>Business Phone:</strong> {setupData.user.contactBusinessPhone || "-"}
+				</Typography>
+				<Typography>
+					<strong>Role:</strong> {setupData.user.role}
 				</Typography>
 				<Typography>
 					<strong>Department:</strong> {setupData.user.department || "-"}
@@ -217,3 +235,5 @@ export function SetupReview({ setupData, onBack }) {
 		</Box>
 	);
 }
+
+export default SetupReview;
