@@ -1,6 +1,31 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { type DefaultAuthorizationMode } from "@aws-amplify/backend-data";
 
+const AUTH_TYPES = [
+	"GOVLYNK_ADMIN",
+	"GOVLYNK_CONSULTANT",
+	"GOVLYNK_USER",
+	"COMPANY_ADMIN",
+	"COMPANY_USER",
+	"VIEWER",
+] as const;
+
+const COMPANY_ROLES = [
+	"Executive",
+	"Sales",
+	"Marketing",
+	"Finance",
+	"Risk",
+	"Technology",
+	"Engineering",
+	"Operations",
+	"Human Resources",
+	"Legal",
+	"Contracting",
+	"Servicing",
+	"Other",
+] as const;
+
 const schema = a.schema({
 	User: a
 		.model({
@@ -8,17 +33,15 @@ const schema = a.schema({
 			fullName: a.string().required(),
 			email: a.email().required(),
 			phone: a.string(),
-			status: a.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+			status: a.enum(["ACTIVE", "INACTIVE"]),
 			companyName: a.string().array(),
 			uei: a.string().array(),
-			auth: a
-				.enum(["GOVLYNK_ADMIN", "GOVLYNK_CONSULTANT", "GOVLYNK_USER", "COMPANY_ADMIN", "COMPANY_USER", "VIEWER"])
-				.required(),
+			auth: a.enum(AUTH_TYPES),
 			lastLogin: a.datetime(),
-			contact: a.belongsTo("Contact", "contactId"),
-			todos: a.hasMany("Todo", "assigneeId"),
+			contact: a.belongsTo("Contact"),
+			todos: a.hasMany("Todo"),
 		})
-		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
+		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
 
 	Contact: a
 		.model({
@@ -36,28 +59,63 @@ const schema = a.schema({
 			workAddressZipCode: a.string(),
 			workAddressCountryCode: a.string(),
 			notes: a.string(),
-			role: a
-				.enum([
-					"Executive",
-					"Sales",
-					"Marketing",
-					"Finance",
-					"Risk",
-					"Technology",
-					"Engineering",
-					"Operations",
-					"Human Resources",
-					"Legal",
-					"Contracting",
-					"Servicing",
-					"Other",
-				])
-				.required(),
+			role: a.enum(COMPANY_ROLES),
 			user: a.hasOne("User"),
 		})
-		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
+		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
 
-	// ... rest of the schema remains unchanged
+	Company: a
+		.model({
+			legalBusinessName: a.string().required(),
+			dbaName: a.string(),
+			uei: a.string().required(),
+			cageCode: a.string(),
+			ein: a.string(),
+			companyEmail: a.email(),
+			companyPhoneNumber: a.string(),
+			companyWebsite: a.url(),
+			status: a.enum(["ACTIVE", "INACTIVE", "PENDING"]),
+			users: a.hasMany("UserCompanyRole"),
+			teams: a.hasMany("Team"),
+		})
+		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
+
+	UserCompanyRole: a
+		.model({
+			userId: a.string().required(),
+			companyId: a.string().required(),
+			roleId: a.string().required(),
+			user: a.belongsTo("User"),
+			company: a.belongsTo("Company"),
+			status: a.enum(["ACTIVE", "INACTIVE"]),
+		})
+		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
+
+	Team: a
+		.model({
+			companyId: a.string().required(),
+			contactId: a.string().required(),
+			role: a.enum(COMPANY_ROLES),
+			company: a.belongsTo("Company"),
+			contact: a.belongsTo("Contact"),
+		})
+		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
+
+	Todo: a
+		.model({
+			title: a.string().required(),
+			description: a.string().required(),
+			status: a.enum(["TODO", "DOING", "DONE"]),
+			priority: a.enum(["LOW", "MEDIUM", "HIGH"]),
+			dueDate: a.datetime().required(),
+			estimatedEffort: a.float(),
+			actualEffort: a.float(),
+			tags: a.string().array(),
+			position: a.integer().required(),
+			assigneeId: a.string(),
+			assignee: a.belongsTo("User"),
+		})
+		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
