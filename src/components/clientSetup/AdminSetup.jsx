@@ -42,27 +42,27 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 		contactMobilePhone: "",
 		contactBusinessPhone: "",
 		role: "",
-		workAddressStreetLine1: companyData?.physicalAddress?.addressLine1 || "",
-		workAddressStreetLine2: companyData?.physicalAddress?.addressLine2 || "",
-		workAddressCity: companyData?.physicalAddress?.city || "",
-		workAddressStateCode: companyData?.physicalAddress?.stateOrProvinceCode || "",
-		workAddressZipCode: companyData?.physicalAddress?.zipCode || "",
-		workAddressCountryCode: companyData?.physicalAddress?.countryCode || "USA",
+		workAddressStreetLine1: companyData?.shippingAddressStreetLine1 || "",
+		workAddressStreetLine2: companyData?.shippingAddressStreetLine2 || "",
+		workAddressCity: companyData?.shippingAddressCity || "",
+		workAddressStateCode: companyData?.shippingAddressStateOrProvinceCode || "",
+		workAddressZipCode: companyData?.shippingAddressZipCode || "",
+		workAddressCountryCode: companyData?.shippingAddressCuntryCode || "USA",
 		notes: "",
 		auth: "COMPANY_ADMIN",
 	});
 	const [errors, setErrors] = useState({});
 
 	useEffect(() => {
-		if (companyData?.physicalAddress) {
+		if (companyData?.shippingAddressCity != "") {
 			setFormData((prev) => ({
 				...prev,
-				workAddressStreetLine1: companyData.physicalAddress.addressLine1 || "",
-				workAddressStreetLine2: companyData.physicalAddress.addressLine2 || "",
-				workAddressCity: companyData.physicalAddress.city || "",
-				workAddressStateCode: companyData.physicalAddress.stateOrProvinceCode || "",
-				workAddressZipCode: companyData.physicalAddress.zipCode || "",
-				workAddressCountryCode: companyData.physicalAddress.countryCode || "USA",
+				workAddressStreetLine1: companyData.shippingAddressStreetLine1 || "",
+				workAddressStreetLine2: companyData.shippingAddressStreetLine2 || "",
+				workAddressCity: companyData.shippingAddressCity || "",
+				workAddressStateCode: companyData.shippingAddressStateCode || "",
+				workAddressZipCode: companyData.shippingAddressZipCode || "",
+				workAddressCountryCode: companyData.shippingAddressCuntryCode || "USA",
 			}));
 		}
 	}, [companyData]);

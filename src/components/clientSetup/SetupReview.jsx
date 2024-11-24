@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Button, Typography, Paper, Divider, Alert, CircularProgress, useTheme } from "@mui/material";
 import { ArrowLeft, Check } from "lucide-react";
-import { generateClient } from "aws-amplify/data";
-
-const client = generateClient({
-	authMode: "userPool",
-});
+import { useCompanyStore } from "../../stores/companyStore";
+import { useUserStore } from "../../stores/userStore";
+import { useTeamStore } from "../../stores/teamStore";
+import { useUserCompanyRoleStore } from "../../stores/userCompanyRoleStore";
+import { useAuthStore } from "../../stores/authStore";
 
 export function SetupReview({ setupData, onBack }) {
 	const theme = useTheme();
@@ -13,37 +13,38 @@ export function SetupReview({ setupData, onBack }) {
 	const [error, setError] = useState(null);
 	const [success, setSuccess] = useState(false);
 
+	const { addCompany } = useCompanyStore();
+	const { addUser } = useUserStore();
+	const { addTeam } = useTeamStore();
+	const { addUserCompanyRole } = useUserCompanyRoleStore();
+	const { user } = useAuthStore();
+
+	useEffect(() => {
+		console.log("SetupReview component mounted");
+		console.log("setupData:", setupData);
+		console.log("user:", user);
+	}, [setupData, user]);
+
 	const handleSetup = async () => {
 		setLoading(true);
 		setError(null);
-		console.log("Starting setup process...");
+		console.log("inside handleSetup");
 
 		try {
 			// 1. Create company
-			console.log("Creating company...");
-			const companyData = {
+			console.log("Creating company with data:", setupData.company);
+			const company = await addCompany({
 				legalBusinessName: setupData.company.legalBusinessName,
-				dbaName: setupData.company.dbaName || null,
+				dbaName: setupData.company.dbaName,
 				uei: setupData.company.uei,
-				cageCode: setupData.company.cageCode || null,
-				ein: setupData.company.ein || null,
-				companyEmail: setupData.user.contactEmail || null,
-				companyPhoneNumber: setupData.user.contactBusinessPhone || null,
-				companyWebsite: setupData.company.entityURL
-					? setupData.company.entityURL.startsWith("http")
-						? setupData.company.entityURL
-						: `https://${setupData.company.entityURL}`
-					: null,
+				cageCode: setupData.company.cageCode,
+				ein: setupData.company.ein,
+				companyEmail: setupData.company.companyEmail,
+				companyPhoneNumber: setupData.company.companyPhoneNumber,
+				companyWebsite: setupData.company.companyWebsite,
 				status: "ACTIVE",
-			};
-
-			const companyResponse = await client.models.Company.create(companyData);
-			console.log("Company created:", companyResponse);
-
-			if (!companyResponse?.data?.id) {
-				throw new Error("Failed to create company");
-			}
-			const companyId = companyResponse.data.id;
+			});
+			console.log("Created company:", company);
 
 			// 2. Create contact
 			console.log("Creating contact...");
@@ -55,15 +56,15 @@ export function SetupReview({ setupData, onBack }) {
 				contactEmail: setupData.user.contactEmail,
 				contactMobilePhone: setupData.user.contactMobilePhone || null,
 				contactBusinessPhone: setupData.user.contactBusinessPhone || null,
-				workAddressStreetLine1: setupData.company.physicalAddress?.addressLine1 || null,
-				workAddressStreetLine2: setupData.company.physicalAddress?.addressLine2 || null,
-				workAddressCity: setupData.company.physicalAddress?.city || null,
-				workAddressStateCode: setupData.company.physicalAddress?.stateOrProvinceCode || null,
-				workAddressZipCode: setupData.company.physicalAddress?.zipCode || null,
-				workAddressCountryCode: setupData.company.physicalAddress?.countryCode || "USA",
+				workAddressStreetLine1: setupData.user.workAddressStreetLine1 || null,
+				workAddressStreetLine2: setupData.user.workAddressStreetLine2 || null,
+				workAddressCity: setupData.user.workAddressCity || null,
+				workAddressStateCode: setupData.user.workAddressStateCode || null,
+				workAddressZipCode: setupData.user.workAddressZipCode || null,
+				workAddressCountryCode: setupData.user.workAddressCountryCode || "USA",
 				dateLastContacted: new Date().toISOString(),
 				notes: `Initial contact created during company setup. Role: ${setupData.user.role}`,
-				companyId,
+				companyId: company.id, // Ensure this field is defined in the schema
 			};
 
 			const contactResponse = await client.models.Contact.create(contactData);
@@ -94,57 +95,37 @@ export function SetupReview({ setupData, onBack }) {
 					throw new Error("Failed to create user");
 				}
 				userId = userResponse.data.id;
-
-				// Update contact with user ID
-				await client.models.Contact.update({
-					id: contactId,
-					userId,
-				});
-
-				// Create user-company role
-				console.log("Creating user-company role...");
-				const userCompanyRoleData = {
-					userId,
-					companyId,
-					roleId: "ADMIN",
-					status: "ACTIVE",
-				};
-
-				await client.models.UserCompanyRole.create(userCompanyRoleData);
-				console.log("UserCompanyRole created");
 			}
 
-			// 4. Create team
-			console.log("Creating team...");
-			const teamData = {
-				name: "Management Team",
-				description: "Primary management team for the company",
-				companyId,
-			};
-
-			const teamResponse = await client.models.Team.create(teamData);
-			console.log("Team created:", teamResponse);
-
-			if (!teamResponse?.data?.id) {
-				throw new Error("Failed to create team");
-			}
-			const teamId = teamResponse.data.id;
-
-			// 5. Create team member
-			console.log("Creating team member...");
-			const teamMemberData = {
-				teamId,
-				contactId,
-				role: setupData.user.role,
+			// 4. Create user-company role
+			console.log("Creating user-company role with data:", {
+				userId,
+				companyId: company.id,
+				roleId: "COMPANY_ADMIN",
 				status: "ACTIVE",
-				notes: "Initial team member created during company setup",
-			};
+			});
+			const userCompanyRole = await addUserCompanyRole({
+				userId,
+				companyId: company.id,
+				roleId: "COMPANY_ADMIN",
+				status: "ACTIVE",
+			});
+			console.log("Created user-company role:", userCompanyRole);
 
-			await client.models.TeamMember.create(teamMemberData);
-			console.log("Team member created");
+			// 5. Create team
+			console.log("Creating team with data:", {
+				companyId: company.id,
+				role: "TEAM_MEMBER",
+				contact: setupData.team?.contact,
+			});
+			const team = await addTeam({
+				companyId: company.id,
+				role: "TEAM_MEMBER",
+				contact: setupData.team?.contact,
+			});
+			console.log("Created team:", team);
 
 			setSuccess(true);
-			console.log("Setup completed successfully!");
 		} catch (err) {
 			console.error("Setup error:", err);
 			setError(err.message || "Failed to complete setup. Please check your input and try again.");
@@ -163,90 +144,70 @@ export function SetupReview({ setupData, onBack }) {
 					<strong>Legal Business Name:</strong> {setupData.company.legalBusinessName}
 				</Typography>
 				<Typography>
-					<strong>DBA Name:</strong> {setupData.company.dbaName || "-"}
+					<strong>DBA Name:</strong> {setupData.company.dbaName}
 				</Typography>
 				<Typography>
 					<strong>UEI:</strong> {setupData.company.uei}
 				</Typography>
 				<Typography>
-					<strong>CAGE Code:</strong> {setupData.company.cageCode || "-"}
+					<strong>CAGE Code:</strong> {setupData.company.cageCode}
 				</Typography>
 				<Typography>
-					<strong>Company Email:</strong> {setupData.user.contactEmail || "-"}
+					<strong>Company Email:</strong> {setupData.company.companyEmail}
 				</Typography>
 				<Typography>
-					<strong>Company Phone Number:</strong> {setupData.user.contactBusinessPhone || "-"}
+					<strong>Company Phone Number:</strong> {setupData.company.companyPhoneNumber}
 				</Typography>
 				<Typography>
-					<strong>Company Website:</strong> {setupData.company.entityURL || "-"}
+					<strong>Company Website:</strong> {setupData.company.companyWebsite}
 				</Typography>
-
-				<Typography>
-					<strong>Physical Address:</strong>
-					<br />
-					{setupData.company.shippingAddress?.addressLine1}
-					{setupData.company.shippingAddress?.addressLine2 && (
-						<>
-							<br />
-							{setupData.company.shippingAddress.addressLine2}
-						</>
-					)}
-					<br />
-					{setupData.company.shippingAddress?.city}, {setupData.company.shippingAddress?.stateOrProvinceCode}{" "}
-					{setupData.company.shippingAddress?.zipCode}
-				</Typography>
-
 				<Divider sx={{ my: 2 }} />
 				<Typography variant='h6'>User Information</Typography>
 				<Divider sx={{ my: 2 }} />
 				<Typography>
-					<strong>Name:</strong> {`${setupData.user.firstName} ${setupData.user.lastName}`}
+					<strong>Name:</strong> {setupData.user.firstName} {setupData.user.lastName}
 				</Typography>
 				<Typography>
 					<strong>Email:</strong> {setupData.user.contactEmail}
 				</Typography>
 				<Typography>
-					<strong>Mobile Phone:</strong> {setupData.user.contactMobilePhone || "-"}
+					<strong>Phone:</strong> {setupData.user.contactMobilePhone}
 				</Typography>
-				<Typography>
-					<strong>Business Phone:</strong> {setupData.user.contactBusinessPhone || "-"}
-				</Typography>
-				<Typography>
-					<strong>Role:</strong> {setupData.user.role}
-				</Typography>
-				<Typography>
-					<strong>Department:</strong> {setupData.user.department || "-"}
-				</Typography>
-				<Typography>
-					<strong>Title:</strong> {setupData.user.title || "-"}
-				</Typography>
-				<Typography>
-					<strong>Cognito ID:</strong> {setupData.user.cognitoId || "Not provided"}
-				</Typography>
-
-				{error && (
-					<Alert severity='error' sx={{ mt: 2 }}>
-						{error}
-					</Alert>
-				)}
-				{success && (
-					<Alert severity='success' sx={{ mt: 2 }}>
-						Setup completed successfully!
-					</Alert>
+				<Divider sx={{ my: 2 }} />
+				<Typography variant='h6'>Team Information</Typography>
+				<Divider sx={{ my: 2 }} />
+				{setupData.team?.contact ? (
+					<>
+						<Typography>
+							<strong>Contact Name:</strong> {setupData.team.contact.name}
+						</Typography>
+						<Typography>
+							<strong>Contact Email:</strong> {setupData.team.contact.email}
+						</Typography>
+						<Typography>
+							<strong>Contact Phone:</strong> {setupData.team.contact.phone}
+						</Typography>
+					</>
+				) : (
+					<Typography>No contact information provided.</Typography>
 				)}
 			</Paper>
-
+			{error && (
+				<Alert severity='error' sx={{ mt: 2 }}>
+					{error}
+				</Alert>
+			)}
+			{success && (
+				<Alert severity='success' sx={{ mt: 2 }}>
+					Setup completed successfully!
+				</Alert>
+			)}
 			<Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
-				<Button variant='outlined' startIcon={<ArrowLeft />} onClick={onBack} disabled={loading}>
+				<Button variant='outlined' startIcon={<ArrowLeft />} onClick={onBack}>
 					Back
 				</Button>
-				<Button
-					variant='contained'
-					endIcon={loading ? <CircularProgress size={20} /> : <Check />}
-					onClick={handleSetup}
-					disabled={loading}
-				>
-					{loading ? "Setting up..." : "Complete Setup"}
+				<Button variant='contained' endIcon={<Check />} onClick={handleSetup} disabled={loading}>
+					{loading ? <CircularProgress size={24} /> : "Complete Setup"}
 				</Button>
 			</Box>
 		</Box>
