@@ -17,6 +17,7 @@ export default function ClientSetupScreen() {
 
 	const handleCompanySelect = (companyData) => {
 		setSetupData((prev) => ({ ...prev, company: companyData }));
+		console.log("companyData", companyData);
 		setActiveStep(1);
 	};
 

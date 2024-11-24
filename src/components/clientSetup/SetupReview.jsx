@@ -19,8 +19,6 @@ export function SetupReview({ setupData, onBack }) {
 		setLoading(true);
 		setError(null);
 		console.log("Starting setup process...");
-		console.log("Current user:", currentUser);
-		console.log("Setup data:", setupData);
 
 		try {
 			if (!currentUser?.sub) {
@@ -46,14 +44,34 @@ export function SetupReview({ setupData, onBack }) {
 			};
 
 			const companyResponse = await client.models.Company.create(companyData);
+			console.log("Company created:", companyResponse);
+
 			if (!companyResponse?.data?.id) {
 				throw new Error("Failed to create company");
 			}
-			console.log("Company created successfully:", companyResponse);
 			const companyId = companyResponse.data.id;
 
-			// 2. Create contact for admin
-			console.log("Creating contact for admin...");
+			// 2. Create user
+			console.log("Creating user...");
+			const userData = {
+				cognitoId: currentUser.sub,
+				email: setupData.user.email,
+				name: `${setupData.user.firstName} ${setupData.user.lastName}`.trim(),
+				phone: setupData.user.phone || null,
+				status: "ACTIVE",
+				lastLogin: new Date().toISOString(),
+			};
+
+			const userResponse = await client.models.User.create(userData);
+			console.log("User created:", userResponse);
+
+			if (!userResponse?.data?.id) {
+				throw new Error("Failed to create user");
+			}
+			const userId = userResponse.data.id;
+
+			// 3. Create contact
+			console.log("Creating contact...");
 			const contactData = {
 				firstName: setupData.user.firstName,
 				lastName: setupData.user.lastName,
@@ -67,64 +85,49 @@ export function SetupReview({ setupData, onBack }) {
 				workAddressCity: setupData.company.physicalAddress?.city || null,
 				workAddressStateCode: setupData.company.physicalAddress?.stateOrProvinceCode || null,
 				workAddressZipCode: setupData.company.physicalAddress?.zipCode || null,
-				workAddressCountryCode: "USA",
+				workAddressCountryCode: setupData.company.physicalAddress?.countryCode || "USA",
 				dateLastContacted: new Date().toISOString(),
-				notes: null,
+				notes: `Initial contact created during company setup. Role: ${setupData.user.companyRole}`,
 			};
 
 			const contactResponse = await client.models.Contact.create(contactData);
+			console.log("Contact created:", contactResponse);
+
 			if (!contactResponse?.data?.id) {
 				throw new Error("Failed to create contact");
 			}
-			console.log("Contact created successfully:", contactResponse);
 			const contactId = contactResponse.data.id;
 
-			// 3. Create team member
+			// 4. Create team member
 			console.log("Creating team member...");
 			const teamData = {
-				companyId,
-				contactId,
+				companyId: companyId,
+				contactId: contactId,
 				role: setupData.user.companyRole || "EXECUTIVE",
 			};
 
 			const teamResponse = await client.models.Team.create(teamData);
+			console.log("Team created:", teamResponse);
+
 			if (!teamResponse?.data?.id) {
 				throw new Error("Failed to create team");
 			}
-			console.log("Team member created successfully:", teamResponse);
-
-			// 4. Create user
-			console.log("Creating user...");
-			const userData = {
-				cognitoId: currentUser.sub,
-				email: setupData.user.email,
-				name: `${setupData.user.firstName} ${setupData.user.lastName}`.trim(),
-				phone: setupData.user.phone || null,
-				status: "ACTIVE",
-				lastLogin: new Date().toISOString(),
-			};
-
-			const userResponse = await client.models.User.create(userData);
-			if (!userResponse?.data?.id) {
-				throw new Error("Failed to create user");
-			}
-			console.log("User created successfully:", userResponse);
-			const userId = userResponse.data.id;
 
 			// 5. Create user-company role
 			console.log("Creating user-company role...");
 			const userCompanyRoleData = {
-				userId,
-				companyId,
+				userId: userId,
+				companyId: companyId,
 				roleId: "ADMIN",
 				status: "ACTIVE",
 			};
 
 			const userCompanyRoleResponse = await client.models.UserCompanyRole.create(userCompanyRoleData);
+			console.log("UserCompanyRole created:", userCompanyRoleResponse);
+
 			if (!userCompanyRoleResponse?.data?.id) {
 				throw new Error("Failed to create user-company role");
 			}
-			console.log("User-company role created successfully:", userCompanyRoleResponse);
 
 			setSuccess(true);
 			console.log("Setup completed successfully!");
@@ -155,10 +158,10 @@ export function SetupReview({ setupData, onBack }) {
 					<strong>CAGE Code:</strong> {setupData.company.cageCode || "-"}
 				</Typography>
 				<Typography>
-					<strong>Company Email:</strong> {setupData.company.companyEmail || "-"}
+					<strong>Company Email:</strong> {setupData.user.email || "-"}
 				</Typography>
 				<Typography>
-					<strong>Company Phone Number:</strong> {setupData.company.companyPhoneNumber || "-"}
+					<strong>Company Phone Number:</strong> {setupData.user.phone || "-"}
 				</Typography>
 				<Typography>
 					<strong>Company Website:</strong> {setupData.company.entityURL || "-"}

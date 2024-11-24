@@ -1,71 +1,8 @@
 import React, { useState } from "react";
 import { Box, TextField, Button, Typography, CircularProgress, Alert, Paper, useTheme } from "@mui/material";
 import { Search, ArrowRight } from "lucide-react";
-import { useCompanyStore } from "../../stores/companyStore";
 import { getEntity } from "../../utils/samApi";
-
-const formatCompanyData = (entityData) => {
-	if (!entityData) return null;
-
-	return {
-		// Basic Information
-		uei: entityData.entityRegistration?.ueiSAM || "",
-		legalBusinessName: entityData.entityRegistration?.legalBusinessName || "",
-		dbaName: entityData.entityRegistration?.dbaName || "",
-		cageCode: entityData.entityRegistration?.cageCode || "",
-		registrationStatus: entityData.entityRegistration?.registrationStatus || "",
-		registrationExpirationDate: entityData.entityRegistration?.registrationExpirationDate || "",
-
-		// Physical Address
-		physicalAddress: {
-			addressLine1: entityData.coreData?.physicalAddress?.addressLine1 || "",
-			addressLine2: entityData.coreData?.physicalAddress?.addressLine2 || "",
-			city: entityData.coreData?.physicalAddress?.city || "",
-			stateOrProvinceCode: entityData.coreData?.physicalAddress?.stateOrProvinceCode || "",
-			zipCode: entityData.coreData?.physicalAddress?.zipCode || "",
-			zipCodePlus4: entityData.coreData?.physicalAddress?.zipCodePlus4 || "",
-			countryCode: entityData.coreData?.physicalAddress?.countryCode || "",
-		},
-
-		// Business Information
-		entityURL: entityData.coreData?.entityInformation?.entityURL || "",
-		entityStartDate: entityData.coreData?.entityInformation?.entityStartDate || "",
-		fiscalYearEndDate: entityData.coreData?.entityInformation?.fiscalYearEndCloseDate || "",
-
-		// Business Types
-		businessTypes:
-			entityData.coreData?.businessTypes?.businessTypeList?.map((type) => ({
-				code: type.businessTypeCode || "",
-				description: type.businessTypeDesc || "",
-			})) || [],
-
-		// NAICS Codes
-		naicsList:
-			entityData.assertions?.goodsAndServices?.naicsList?.map((naics) => ({
-				code: naics.naicsCode || "",
-				description: naics.naicsDescription || "",
-				isPrimary: naics.naicsCode === entityData.assertions?.goodsAndServices?.primaryNaics,
-			})) || [],
-
-		// Points of Contact
-		pointsOfContact: {
-			electronic: {
-				firstName: entityData.pointsOfContact?.electronicBusinessPOC?.firstName || "",
-				lastName: entityData.pointsOfContact?.electronicBusinessPOC?.lastName || "",
-				title: entityData.pointsOfContact?.electronicBusinessPOC?.title || "",
-				email: entityData.pointsOfContact?.electronicBusinessPOC?.email || "",
-				phone: entityData.pointsOfContact?.electronicBusinessPOC?.phoneNumber || "",
-			},
-			government: {
-				firstName: entityData.pointsOfContact?.governmentBusinessPOC?.firstName || "",
-				lastName: entityData.pointsOfContact?.governmentBusinessPOC?.lastName || "",
-				title: entityData.pointsOfContact?.governmentBusinessPOC?.title || "",
-				email: entityData.pointsOfContact?.governmentBusinessPOC?.email || "",
-				phone: entityData.pointsOfContact?.governmentBusinessPOC?.phoneNumber || "",
-			},
-		},
-	};
-};
+import { formatCompanyData } from "../../utils/companyDataMapper";
 
 export function CompanySearch({ onCompanySelect }) {
 	const theme = useTheme();
@@ -91,8 +28,11 @@ export function CompanySearch({ onCompanySelect }) {
 				throw new Error("No company data found for the provided UEI");
 			}
 
+			console.log("Raw entity data:", entityData);
+			console.log("Formatted company data:", formattedData);
 			setSearchResult(formattedData);
 		} catch (err) {
+			console.error("Search error:", err);
 			setError(err.message || "Failed to fetch company information. Please verify the UEI and try again.");
 		} finally {
 			setLoading(false);
@@ -182,7 +122,7 @@ export function CompanySearch({ onCompanySelect }) {
 							<Typography variant='caption' color='text.secondary'>
 								Registration Status
 							</Typography>
-							<Typography variant='body1'>{searchResult.registrationStatus}</Typography>
+							<Typography variant='body1'>{searchResult.registrationStatus || "-"}</Typography>
 						</Box>
 						<Box>
 							<Typography variant='caption' color='text.secondary'>
@@ -195,17 +135,16 @@ export function CompanySearch({ onCompanySelect }) {
 								Physical Address
 							</Typography>
 							<Typography variant='body1'>
-								{searchResult.physicalAddress.addressLine1}
-								{searchResult.physicalAddress.addressLine2 && (
+								{searchResult.shippingAddressStreetLine1}
+								{searchResult.shippingAddressStreetLine2 && (
 									<>
 										<br />
-										{searchResult.physicalAddress.addressLine2}
+										{searchResult.shippingAddressStreetLine2}
 									</>
 								)}
 								<br />
-								{searchResult.physicalAddress.city}, {searchResult.physicalAddress.stateOrProvinceCode}{" "}
-								{searchResult.physicalAddress.zipCode}
-								{searchResult.physicalAddress.zipCodePlus4 && `-${searchResult.physicalAddress.zipCodePlus4}`}
+								{searchResult.shippingAddressCity}, {searchResult.shippingAddressStateCode}{" "}
+								{searchResult.shippingAddressZipCode}
 							</Typography>
 						</Box>
 					</Box>
