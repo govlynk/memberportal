@@ -39,7 +39,7 @@ const schema = a.schema({
 			auth: a.enum(AUTH_TYPES),
 			lastLogin: a.datetime(),
 			contact: a.belongsTo("Contact"),
-			todos: a.hasMany("Todo"),
+			todos: a.hasMany("Todo", "assigneeId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
@@ -60,7 +60,8 @@ const schema = a.schema({
 			workAddressCountryCode: a.string(),
 			notes: a.string(),
 			role: a.enum(COMPANY_ROLES),
-			user: a.hasOne("User"),
+			user: a.hasOne("User", "contactId"),
+			teams: a.hasMany("Team", "contactId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
@@ -75,8 +76,8 @@ const schema = a.schema({
 			companyPhoneNumber: a.string(),
 			companyWebsite: a.url(),
 			status: a.enum(["ACTIVE", "INACTIVE", "PENDING"]),
-			users: a.hasMany("UserCompanyRole"),
-			teams: a.hasMany("Team"),
+			users: a.hasMany("UserCompanyRole", "companyId"),
+			teams: a.hasMany("Team", "companyId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
@@ -96,8 +97,8 @@ const schema = a.schema({
 			companyId: a.string().required(),
 			contactId: a.string().required(),
 			role: a.enum(COMPANY_ROLES),
-			company: a.belongsTo("Company"),
-			contact: a.belongsTo("Contact"),
+			company: a.belongsTo("Company", "companyId"),
+			contact: a.belongsTo("Contact", "contactId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
@@ -113,7 +114,7 @@ const schema = a.schema({
 			tags: a.string().array(),
 			position: a.integer().required(),
 			assigneeId: a.string(),
-			assignee: a.belongsTo("User"),
+			assignee: a.belongsTo("User", "assigneeId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 });
