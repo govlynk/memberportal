@@ -1,3 +1,31 @@
+import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
+import { type DefaultAuthorizationMode } from "@aws-amplify/backend-data";
+
+const AUTH_TYPES = [
+	"GOVLYNK_ADMIN",
+	"GOVLYNK_CONSULTANT",
+	"GOVLYNK_USER",
+	"COMPANY_ADMIN",
+	"COMPANY_USER",
+	"VIEWER",
+] as const;
+
+const COMPANY_ROLES = [
+	"Executive",
+	"Sales",
+	"Marketing",
+	"Finance",
+	"Risk",
+	"Technology",
+	"Engineering",
+	"Operations",
+	"Human Resources",
+	"Legal",
+	"Contracting",
+	"Servicing",
+	"Other",
+] as const;
+
 const schema = a.schema({
 	User: a
 		.model({
