@@ -41,7 +41,7 @@ const schema = a.schema({
 			contact: a.belongsTo("Contact"),
 			todos: a.hasMany("Todo"),
 		})
-		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
 	Contact: a
 		.model({
@@ -62,7 +62,7 @@ const schema = a.schema({
 			role: a.enum(COMPANY_ROLES),
 			user: a.hasOne("User"),
 		})
-		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
 	Company: a
 		.model({
@@ -78,7 +78,7 @@ const schema = a.schema({
 			users: a.hasMany("UserCompanyRole"),
 			teams: a.hasMany("Team"),
 		})
-		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
 	UserCompanyRole: a
 		.model({
@@ -89,7 +89,7 @@ const schema = a.schema({
 			company: a.belongsTo("Company"),
 			status: a.enum(["ACTIVE", "INACTIVE"]),
 		})
-		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
 	Team: a
 		.model({
@@ -99,7 +99,7 @@ const schema = a.schema({
 			company: a.belongsTo("Company"),
 			contact: a.belongsTo("Contact"),
 		})
-		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
 	Todo: a
 		.model({
@@ -115,7 +115,7 @@ const schema = a.schema({
 			assigneeId: a.string(),
 			assignee: a.belongsTo("User"),
 		})
-		.authorization([a.allow.owner(), a.allow.group("Admin", ["create", "read", "update", "delete"])]),
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
