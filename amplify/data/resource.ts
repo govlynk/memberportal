@@ -26,7 +26,7 @@ const schema = a.schema({
 			phone: a.string(),
 			status: a.enum(["ACTIVE", "INACTIVE"]),
 			lastLogin: a.datetime(),
-			avatar: a.url(), // Added avatar field
+			avatar: a.url(),
 			companies: a.hasMany("UserCompanyRole", "userId"),
 			todos: a.hasMany("Todo", "assigneeId"),
 		})
@@ -85,29 +85,7 @@ const schema = a.schema({
 			sbaBusinessTypeDesc: a.string().array(),
 			entityURL: a.url(),
 			users: a.hasMany("UserCompanyRole", "companyId"),
-			contacts: a.hasMany("Contact", "companyId"),
 			teams: a.hasMany("Team", "companyId"),
-		})
-		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
-
-	UserCompanyRole: a
-		.model({
-			userId: a.string().required(),
-			companyId: a.string().required(),
-			roleId: a.string().required(),
-			status: a.enum(["ACTIVE", "INACTIVE"]),
-			user: a.belongsTo("User", "userId"),
-			company: a.belongsTo("Company", "companyId"),
-		})
-		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
-
-	Team: a
-		.model({
-			companyId: a.string().required(),
-			contactId: a.string().required(),
-			role: a.enum(COMPANY_ROLES),
-			company: a.belongsTo("Company", "companyId"),
-			contact: a.belongsTo("Contact", "contactId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
@@ -127,10 +105,31 @@ const schema = a.schema({
 			workAddressStateCode: a.string(),
 			workAddressZipCode: a.string(),
 			workAddressCountryCode: a.string(),
-
 			notes: a.string(),
 			companyId: a.string().required(),
+			company: a.belongsTo("Company", "companyId"),
 			teams: a.hasMany("Team", "contactId"),
+		})
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
+
+	Team: a
+		.model({
+			companyId: a.string().required(),
+			contactId: a.string().required(),
+			role: a.enum(COMPANY_ROLES),
+			company: a.belongsTo("Company", "companyId"),
+			contact: a.belongsTo("Contact", "contactId"),
+		})
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
+
+	UserCompanyRole: a
+		.model({
+			userId: a.string().required(),
+			companyId: a.string().required(),
+			roleId: a.string().required(),
+			status: a.enum(["ACTIVE", "INACTIVE"]),
+			user: a.belongsTo("User", "userId"),
+			company: a.belongsTo("Company", "companyId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
