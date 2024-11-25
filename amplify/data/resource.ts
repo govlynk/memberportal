@@ -107,7 +107,6 @@ const schema = a.schema({
 			workAddressCountryCode: a.string(),
 			notes: a.string(),
 			companyId: a.string().required(),
-			company: a.belongsTo("Company", "companyId"),
 			teams: a.hasMany("Team", "contactId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
