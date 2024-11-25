@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
-import { withAuthenticator } from "@aws-amplify/ui-react";
+import { Authenticator } from "@aws-amplify/ui-react";
 import { useAuthStore } from "./stores/authStore";
 import AppRouter from "./components/layout/AppRouter";
 
-function App({ user, signOut }) {
+export default function App() {
 	const initializeAuth = useAuthStore((state) => state.initialize);
 
 	useEffect(() => {
@@ -12,7 +12,9 @@ function App({ user, signOut }) {
 		}
 	}, [user, initializeAuth]);
 
-	return <AppRouter signOut={signOut} user={user} />;
+	return (
+		<Authenticator loginMechanisms={["email"]}>
+			{({ signOut, user }) => <AppRouter signOut={signOut} user={user} />}
+		</Authenticator>
+	);
 }
-
-export default withAuthenticator(App);

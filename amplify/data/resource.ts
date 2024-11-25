@@ -1,22 +1,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { type DefaultAuthorizationMode } from "@aws-amplify/backend-data";
 
-const COMPANY_ROLES = [
-	"Executive",
-	"Sales",
-	"Marketing",
-	"Finance",
-	"Risk",
-	"Technology",
-	"Engineering",
-	"Operations",
-	"HumanResources",
-	"Legal",
-	"Contracting",
-	"Servicing",
-	"Other",
-] as const;
-
 const schema = a.schema({
 	User: a
 		.model({
@@ -83,11 +67,20 @@ const schema = a.schema({
 			pscCode: a.string().array(),
 			sbaBusinessTypeDesc: a.string().array(),
 			entityURL: a.url(),
+			status: a.enum(["ACTIVE", "INACTIVE", "PENDING"]),
 			users: a.hasMany("UserCompanyRole", "companyId"),
-			contacts: a.hasMany("Contact", "companyId"),
 			teams: a.hasMany("Team", "companyId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
+
+	Role: a
+		.model({
+			name: a.string().required(),
+			description: a.string(),
+			permissions: a.string().array(),
+			userCompanyRoles: a.hasMany("UserCompanyRole", "roleId"),
+		})
+		.authorization((allow) => [allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
 	UserCompanyRole: a
 		.model({
@@ -97,6 +90,7 @@ const schema = a.schema({
 			status: a.enum(["ACTIVE", "INACTIVE"]),
 			user: a.belongsTo("User", "userId"),
 			company: a.belongsTo("Company", "companyId"),
+			role: a.belongsTo("Role", "roleId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
@@ -104,7 +98,7 @@ const schema = a.schema({
 		.model({
 			companyId: a.string().required(),
 			contactId: a.string().required(),
-			role: a.enum(COMPANY_ROLES),
+			role: a.string().required(),
 			company: a.belongsTo("Company", "companyId"),
 			contact: a.belongsTo("Contact", "contactId"),
 		})
@@ -116,18 +110,17 @@ const schema = a.schema({
 			lastName: a.string().required(),
 			title: a.string(),
 			department: a.string(),
-			contactEmail: a.email(),
-			contactMobilePhone: a.string(),
-			contactBusinessPhone: a.string(),
+			contactEmail: a.email({ pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ }),
+			contactMobilePhone: a.string({ pattern: /^\+?[1-9]\d{1,14}$/ }),
+			contactBusinessPhone: a.string({ pattern: /^\+?[1-9]\d{1,14}$/ }),
 			workAddressStreetLine1: a.string(),
 			workAddressStreetLine2: a.string(),
 			workAddressCity: a.string(),
-			workAddressStateCode: a.string(),
-			workAddressZipCode: a.string(),
-			workAddressCountryCode: a.string(),
+			workAddressStateCode: a.string({ pattern: /^[A-Z]{2}$/ }), // US state code format
+			workAddressZipCode: a.string({ pattern: /^\d{5}(-\d{4})?$/ }), // US ZIP code format
+			workAddressCountryCode: a.string({ pattern: /^[A-Z]{2}$/ }), // ISO country code format
 			dateLastContacted: a.datetime(),
 			notes: a.string(),
-			companyId: a.string().required(),
 			teams: a.hasMany("Team", "contactId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
@@ -138,7 +131,7 @@ const schema = a.schema({
 			description: a.string().required(),
 			status: a.enum(["TODO", "DOING", "DONE"]),
 			priority: a.enum(["LOW", "MEDIUM", "HIGH"]),
-			dueDate: a.datetime().required(),
+			dueDate: a.datetime(),
 			estimatedEffort: a.float(),
 			actualEffort: a.float(),
 			tags: a.string().array(),
