@@ -1,22 +1,3 @@
-import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
-import { type DefaultAuthorizationMode } from "@aws-amplify/backend-data";
-
-const COMPANY_ROLES = [
-	"Executive",
-	"Sales",
-	"Marketing",
-	"Finance",
-	"Risk",
-	"Technology",
-	"Engineering",
-	"Operations",
-	"HumanResources",
-	"Legal",
-	"Contracting",
-	"Servicing",
-	"Other",
-] as const;
-
 const schema = a.schema({
 	User: a
 		.model({
@@ -28,32 +9,6 @@ const schema = a.schema({
 			lastLogin: a.datetime(),
 			companies: a.hasMany("UserCompanyRole", "userId"),
 			todos: a.hasMany("Todo", "assigneeId"),
-			contact: a.hasOne("Contact", "userId"),
-		})
-		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
-
-	Contact: a
-		.model({
-			firstName: a.string().required(),
-			lastName: a.string().required(),
-			title: a.string(),
-			department: a.string(),
-			contactEmail: a.email(),
-			contactMobilePhone: a.string(),
-			contactBusinessPhone: a.string(),
-			workAddressStreetLine1: a.string(),
-			workAddressStreetLine2: a.string(),
-			workAddressCity: a.string(),
-			workAddressStateCode: a.string(),
-			workAddressZipCode: a.string(),
-			workAddressCountryCode: a.string(),
-			dateLastContacted: a.datetime(),
-			notes: a.string(),
-			userId: a.string(),
-			user: a.belongsTo("User", "userId"),
-			company: a.belongsTo("Company", "companyId"),
-			companyId: a.string().required(),
-			teams: a.hasMany("TeamMember", "contactId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
@@ -102,6 +57,13 @@ const schema = a.schema({
 			shippingAddressZipCode: a.string(),
 			stateOfIncorporationCode: a.string(),
 			submissionDate: a.datetime(),
+			SAMPullDate: a.datetime(),
+			certificationEntryDate: a.datetime().array(),
+			keyWords: a.string().array(),
+			naicsCode: a.string().array(),
+			pscCode: a.string().array(),
+			sbaBusinessTypeDesc: a.string().array(),
+			entityURL: a.url(),
 			users: a.hasMany("UserCompanyRole", "companyId"),
 			contacts: a.hasMany("Contact", "companyId"),
 			teams: a.hasMany("Team", "companyId"),
@@ -121,25 +83,34 @@ const schema = a.schema({
 
 	Team: a
 		.model({
-			name: a.string().required(),
-			description: a.string(),
 			companyId: a.string().required(),
+			contactId: a.string().required(),
+			role: a.enum(COMPANY_ROLES),
 			company: a.belongsTo("Company", "companyId"),
-			members: a.hasMany("TeamMember", "teamId"),
+			contact: a.belongsTo("Contact", "contactId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
-	TeamMember: a
+	Contact: a
 		.model({
-			teamId: a.string().required(),
-			contactId: a.string().required(),
-			role: a.enum(COMPANY_ROLES),
-			team: a.belongsTo("Team", "teamId"),
-			contact: a.belongsTo("Contact", "contactId"),
-			status: a.enum(["ACTIVE", "INACTIVE"]),
+			firstName: a.string().required(),
+			lastName: a.string().required(),
+			title: a.string(),
+			department: a.string(),
+			contactEmail: a.email(),
+			contactMobilePhone: a.string(),
+			contactBusinessPhone: a.string(),
+			workAddressStreetLine1: a.string(),
+			workAddressStreetLine2: a.string(),
+			workAddressCity: a.string(),
+			workAddressStateCode: a.string(),
+			workAddressZipCode: a.string(),
+			workAddressCountryCode: a.string(),
+			dateLastContacted: a.datetime(),
 			notes: a.string(),
+			teams: a.hasMany("Team", "contactId"),
 		})
-		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
+		.authorization(() => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
 	Todo: a
 		.model({

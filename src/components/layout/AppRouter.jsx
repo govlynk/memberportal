@@ -5,7 +5,7 @@ import UserScreen from "../../screens/UserScreen";
 import CompanyScreen from "../../screens/CompanyScreen";
 import TeamScreen from "../../screens/TeamScreen";
 import TeamAdminScreen from "../../screens/TeamAdminScreen";
-import ClientSetupScreen from "../../screens/ClientSetupScreen";
+import AdminScreen from "../../screens/AdminScreen";
 import UserCompanyRoleScreen from "../../screens/UserCompanyRoleScreen";
 import ContactsScreen from "../../screens/ContactsScreen";
 import SAMRegistrationScreen from "../../screens/SAMRegistrationScreen";
@@ -23,7 +23,7 @@ const AppRouter = ({ signOut, user }) => {
 				<Route path='company/:companyId/team' element={<TeamScreen />} />
 				<Route path='team' element={<TeamScreen />} />
 				<Route path='team-admin' element={<TeamAdminScreen />} />
-				<Route path='client-setup' element={<ClientSetupScreen />} />
+				<Route path='admin' element={<AdminScreen />} />
 				<Route path='user-company-roles' element={<UserCompanyRoleScreen />} />
 				<Route path='contacts' element={<ContactsScreen />} />
 				<Route path='sam' element={<SAMRegistrationScreen />} />

@@ -82,12 +82,12 @@ export const menuLinks = [
 		icon: Settings,
 		links: [
 			{
-				title: "Client Setup",
-				path: "/client-setup",
+				title: "Company Admin",
+				path: "/admin",
 			},
 			{
-				title: "Company admin",
-				path: "/company",
+				title: "Client Setup",
+				path: "/client-setup",
 			},
 			{
 				title: "Contact Admin",

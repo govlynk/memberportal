@@ -83,6 +83,18 @@ export function SetupReview({ setupData, onBack }) {
 						: `https://${setupData.company.entityURL}`
 					: null,
 				status: "ACTIVE",
+				billingAddressCity: setupData.company.billingAddressCity || null,
+				billingAddressCountryCode: setupData.company.billingAddressCountryCode || null,
+				billingAddressStateCode: setupData.company.billingAddressStateCode || null,
+				billingAddressStreetLine1: setupData.company.billingAddressStreetLine1 || null,
+				billingAddressStreetLine2: setupData.company.billingAddressStreetLine2 || null,
+				billingAddressZipCode: setupData.company.billingAddressZipCode || null,
+				shippingAddressCity: setupData.company.shippingAddressCity || null,
+				shippingAddressCountryCode: setupData.company.shippingAddressCountryCode || null,
+				shippingAddressStateCode: setupData.company.shippingAddressStateCode || null,
+				shippingAddressStreetLine1: setupData.company.shippingAddressStreetLine1 || null,
+				shippingAddressStreetLine2: setupData.company.shippingAddressStreetLine2 || null,
+				shippingAddressZipCode: setupData.company.shippingAddressZipCode || null,
 			};
 
 			const companyResponse = await client.models.Company.create(companyData);
