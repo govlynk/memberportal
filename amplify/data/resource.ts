@@ -129,7 +129,7 @@ const schema = a.schema({
 			notes: a.string(),
 			teams: a.hasMany("Team", "contactId"),
 		})
-		.authorization(() => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 
 	Todo: a
 		.model({
