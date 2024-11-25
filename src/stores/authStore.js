@@ -16,14 +16,24 @@ export const useAuthStore = create()(
 			authDetails: null,
 
 			initialize: async (cognitoUser) => {
-				if (!cognitoUser) return;
+				if (!cognitoUser) {
+					set({
+						user: null,
+						isAuthenticated: false,
+						isAdmin: false,
+						groups: [],
+						authDetails: null,
+					});
+					return;
+				}
 
 				try {
 					// Extract basic auth information
 					const authInfo = {
 						username: cognitoUser.username,
 						userId: cognitoUser.userId,
-						loginId: cognitoUser.signInDetails?.loginId,
+						sub: cognitoUser.userId, // Add sub for compatibility
+						email: cognitoUser.signInDetails?.loginId,
 						authFlowType: cognitoUser.signInDetails?.authFlowType,
 					};
 
@@ -70,6 +80,7 @@ export const useAuthStore = create()(
 					// Create normalized user object
 					const normalizedUser = {
 						...userData,
+						...authInfo, // Include auth info in user object
 						groups,
 						companies:
 							userCompanyRoles?.map((ucr) => ({
@@ -78,7 +89,6 @@ export const useAuthStore = create()(
 								userCompanyRoleId: ucr.id,
 								status: ucr.status,
 							})) || [],
-						authDetails: authInfo,
 						signInUserSession: cognitoUser.signInUserSession,
 					};
 
@@ -89,6 +99,8 @@ export const useAuthStore = create()(
 						groups,
 						authDetails: authInfo,
 					});
+
+					return normalizedUser;
 				} catch (err) {
 					console.error("Error initializing auth:", err);
 					set({
@@ -98,6 +110,7 @@ export const useAuthStore = create()(
 						groups: [],
 						authDetails: null,
 					});
+					throw err;
 				}
 			},
 
@@ -117,6 +130,8 @@ export const useAuthStore = create()(
 							...updatedUser,
 						},
 					}));
+
+					return updatedUser;
 				} catch (err) {
 					console.error("Error updating user profile:", err);
 					throw new Error("Failed to update user profile");

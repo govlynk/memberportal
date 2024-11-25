@@ -31,23 +31,66 @@ export function SetupReview({ setupData, onBack }) {
 		console.log("inside handleSetup");
 
 		try {
+			if (!user?.sub) {
+				throw new Error("User not authenticated");
+			}
+
 			// 1. Create company
-			console.log("Creating company with data:", setupData.company);
-			const company = await addCompany({
+			const companyData = {
 				legalBusinessName: setupData.company.legalBusinessName,
-				dbaName: setupData.company.dbaName,
+				dbaName: setupData.company.dbaName || null,
 				uei: setupData.company.uei,
-				cageCode: setupData.company.cageCode,
-				ein: setupData.company.ein,
-				companyEmail: setupData.company.companyEmail,
-				companyPhoneNumber: setupData.company.companyPhoneNumber,
-				companyWebsite: setupData.company.companyWebsite,
+				cageCode: setupData.company.cageCode || null,
+				companyEmail: setupData.company.companyEmail || null,
+				companyPhoneNumber: setupData.company.companyPhoneNumber || null,
+				companyWebsite: setupData.company.entityURL || null,
 				status: "ACTIVE",
-			});
-			console.log("Created company:", company);
+				activationDate: setupData.company.activationDate || null,
+				billingAddressCity: setupData.company.billingAddressCity || null,
+				billingAddressCountryCode: setupData.company.billingAddressCountryCode || null,
+				billingAddressStateCode: setupData.company.billingAddressStateCode || null,
+				billingAddressStreetLine1: setupData.company.billingAddressStreetLine1 || null,
+				billingAddressStreetLine2: setupData.company.billingAddressStreetLine2 || null,
+				billingAddressZipCode: setupData.company.billingAddressZipCode || null,
+				companyStartDate: setupData.company.companyStartDate || null,
+				congressionalDistrict: setupData.company.congressionalDistrict || null,
+				coreCongressionalDistrict: setupData.company.coreCongressionalDistrict || null,
+				countryOfIncorporationCode: setupData.company.countryOfIncorporationCode || null,
+				entityDivisionName: setupData.company.entityDivisionName || null,
+				entityStartDate: setupData.company.entityStartDate || null,
+				entityStructureDesc: setupData.company.entityStructureDesc || null,
+				entityTypeDesc: setupData.company.entityTypeDesc || null,
+				exclusionStatusFlag: setupData.company.exclusionStatusFlag || null,
+				expirationDate: setupData.company.expirationDate || null,
+				fiscalYearEndCloseDate: setupData.company.fiscalYearEndCloseDate || null,
+				lastUpdateDate: setupData.company.lastUpdateDate || null,
+				organizationStructureDesc: setupData.company.organizationStructureDesc || null,
+				primaryNaics: setupData.company.primaryNaics || null,
+				profitStructureDesc: setupData.company.profitStructureDesc || null,
+				purposeOfRegistrationDesc: setupData.company.purposeOfRegistrationDesc || null,
+				registrationDate: setupData.company.registrationDate || null,
+				registrationExpirationDate: setupData.company.registrationExpirationDate || null,
+				registrationStatus: setupData.company.registrationStatus || null,
+				shippingAddressCity: setupData.company.shippingAddressCity || null,
+				shippingAddressCountryCode: setupData.company.shippingAddressCountryCode || null,
+				shippingAddressStateCode: setupData.company.shippingAddressStateCode || null,
+				shippingAddressStreetLine1: setupData.company.shippingAddressStreetLine1 || null,
+				shippingAddressStreetLine2: setupData.company.shippingAddressStreetLine2 || null,
+				shippingAddressZipCode: setupData.company.shippingAddressZipCode || null,
+				stateOfIncorporationCode: setupData.company.stateOfIncorporationCode || null,
+				submissionDate: setupData.company.submissionDate || null,
+			};
+
+			console.log("Creating Company", companyData);
+			const company = await addCompany(companyData);
+			console.log("Company Created", company);
+
+			if (!company?.id) {
+				throw new Error("Company creation failed - no company ID returned");
+			}
+			console.log("Company Created", company);
 
 			// 2. Create contact
-			console.log("Creating contact...");
 			const contactData = {
 				firstName: setupData.user.firstName,
 				lastName: setupData.user.lastName,
@@ -64,16 +107,16 @@ export function SetupReview({ setupData, onBack }) {
 				workAddressCountryCode: setupData.user.workAddressCountryCode || "USA",
 				dateLastContacted: new Date().toISOString(),
 				notes: `Initial contact created during company setup. Role: ${setupData.user.role}`,
-				companyId: company.id, // Ensure this field is defined in the schema
+				companyId: company.id,
 			};
 
+			console.log("Creating Contact", contactData);
 			const contactResponse = await client.models.Contact.create(contactData);
-			console.log("Contact created:", contactResponse);
 
 			if (!contactResponse?.data?.id) {
-				throw new Error("Failed to create contact");
+				throw new Error("Contact creation failed - no ID returned");
 			}
-			const contactId = contactResponse.data.id;
+			console.log("Contact Created", contactResponse.data);
 
 			// 3. Create user if Cognito ID is provided
 			let userId = setupData.user.cognitoId;
@@ -159,7 +202,7 @@ export function SetupReview({ setupData, onBack }) {
 					<strong>Company Phone Number:</strong> {setupData.company.companyPhoneNumber}
 				</Typography>
 				<Typography>
-					<strong>Company Website:</strong> {setupData.company.companyWebsite}
+					<strong>Company Website:</strong> {setupData.company.entityURL}
 				</Typography>
 				<Divider sx={{ my: 2 }} />
 				<Typography variant='h6'>User Information</Typography>

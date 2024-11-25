@@ -1,10 +1,7 @@
 import { create } from "zustand";
 import { generateClient } from "aws-amplify/data";
-import { useAuthStore } from "./authStore";
 
-const client = generateClient({
-	authMode: "userPool",
-});
+const client = generateClient();
 
 export const useCompanyStore = create((set, get) => ({
 	companies: [],
@@ -20,6 +17,7 @@ export const useCompanyStore = create((set, get) => ({
 					set({
 						companies: items,
 						loading: false,
+						error: null,
 					});
 				},
 				error: (err) => {
@@ -35,31 +33,16 @@ export const useCompanyStore = create((set, get) => ({
 	},
 
 	addCompany: async (companyData) => {
-		set({ loading: true });
+		set({ loading: true, error: null });
 		try {
-			const currentUser = useAuthStore.getState().user;
-			if (!currentUser?.sub) {
-				throw new Error("User not authenticated");
+			const response = await client.models.Company.create(companyData);
+			console.log("response", response);
+
+			if (!response?.data?.id) {
+				throw new Error("Company creation failed - invalid response");
 			}
 
-			const company = await client.models.Company.create({
-				legalBusinessName: companyData.legalBusinessName,
-				dbaName: companyData.dbaName,
-				uei: companyData.uei,
-				cageCode: companyData.cageCode,
-				ein: companyData.ein,
-				companyEmail: companyData.companyEmail,
-				companyPhoneNumber: companyData.companyPhoneNumber,
-				companyWebsite: companyData.companyWebsite,
-				status: companyData.status || "ACTIVE",
-			});
-
-			await client.models.UserCompanyRole.create({
-				userId: currentUser.sub,
-				companyId: company.id,
-				roleId: "ADMIN",
-				status: "ACTIVE",
-			});
+			const company = response.data;
 
 			set((state) => ({
 				companies: [...state.companies, company],
@@ -70,61 +53,56 @@ export const useCompanyStore = create((set, get) => ({
 			return company;
 		} catch (err) {
 			console.error("Create company error:", err);
-			set({ error: err.message || "Failed to create company", loading: false });
-			throw err;
+			const errorMessage = err.message || "Failed to create company";
+			set({ error: errorMessage, loading: false });
+			throw new Error(errorMessage);
 		}
 	},
 
 	updateCompany: async (id, updates) => {
+		set({ loading: true, error: null });
 		try {
-			const updatedCompany = await client.models.Company.update({
+			const response = await client.models.Company.update({
 				id,
 				...updates,
 			});
 
+			if (!response?.data?.id) {
+				throw new Error("Company update failed - invalid response");
+			}
+
+			const company = response.data;
+
 			set((state) => ({
-				companies: state.companies.map((company) => (company.id === id ? updatedCompany : company)),
+				companies: state.companies.map((c) => (c.id === id ? company : c)),
+				loading: false,
 				error: null,
 			}));
-			return updatedCompany;
+
+			return company;
 		} catch (err) {
-			console.error("Error updating company:", err);
-			set({ error: "Failed to update company" });
-			throw err;
+			console.error("Update company error:", err);
+			const errorMessage = err.message || "Failed to update company";
+			set({ error: errorMessage, loading: false });
+			throw new Error(errorMessage);
 		}
 	},
 
 	removeCompany: async (id) => {
+		set({ loading: true, error: null });
 		try {
-			// First remove all UserCompanyRoles associated with this company
-			const userCompanyRoles = await client.models.UserCompanyRole.query({
-				companyId: { eq: id },
-			});
-
-			for (const role of userCompanyRoles.data) {
-				await client.models.UserCompanyRole.delete({ id: role.id });
-			}
-
-			// Then remove all team members associated with this company
-			const teams = await client.models.Team.query({
-				companyId: { eq: id },
-			});
-
-			for (const team of teams.data) {
-				await client.models.Team.delete({ id: team.id });
-			}
-
-			// Finally remove the company
 			await client.models.Company.delete({ id });
 
 			set((state) => ({
-				companies: state.companies.filter((company) => company.id !== id),
+				companies: state.companies.filter((c) => c.id !== id),
+				loading: false,
 				error: null,
 			}));
 		} catch (err) {
-			console.error("Error removing company:", err);
-			set({ error: "Failed to remove company" });
-			throw err;
+			console.error("Remove company error:", err);
+			const errorMessage = err.message || "Failed to remove company";
+			set({ error: errorMessage, loading: false });
+			throw new Error(errorMessage);
 		}
 	},
 

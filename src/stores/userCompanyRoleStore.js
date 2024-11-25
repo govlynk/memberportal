@@ -39,6 +39,7 @@ export const useUserCompanyRoleStore = create((set, get) => ({
 					set({
 						userCompanyRoles: rolesWithRelations,
 						loading: false,
+						error: null,
 					});
 				},
 				error: (err) => {
@@ -59,13 +60,38 @@ export const useUserCompanyRoleStore = create((set, get) => ({
 			const { userId, companyId, roleId, status } = roleData;
 
 			if (!userId || !companyId) {
-				throw new Error("userId and companyId are required");
+				throw new Error(`Invalid role data: userId=${userId}, companyId=${companyId}`);
+			}
+
+			// Verify user and company exist
+			const [userExists, companyExists] = await Promise.all([
+				client.models.User.get({ id: userId }),
+				client.models.Company.get({ id: companyId }),
+			]);
+
+			if (!userExists) {
+				throw new Error(`User with ID ${userId} not found`);
+			}
+
+			if (!companyExists) {
+				throw new Error(`Company with ID ${companyId} not found`);
+			}
+
+			// Check for existing role
+			const existingRoles = await client.models.UserCompanyRole.list({
+				filter: {
+					and: [{ userId: { eq: userId } }, { companyId: { eq: companyId } }],
+				},
+			});
+
+			if (existingRoles.data.length > 0) {
+				throw new Error("User already has a role in this company");
 			}
 
 			const userCompanyRole = await client.models.UserCompanyRole.create({
 				userId,
 				companyId,
-				roleId,
+				roleId: roleId || "MEMBER",
 				status: status || "ACTIVE",
 			});
 
