@@ -118,6 +118,7 @@ const schema = a.schema({
 			title: a.string(),
 			department: a.string(),
 			contactEmail: a.email(),
+			dateLastContacted: a.datetime(),
 			contactMobilePhone: a.string(),
 			contactBusinessPhone: a.string(),
 			workAddressStreetLine1: a.string(),
@@ -126,7 +127,7 @@ const schema = a.schema({
 			workAddressStateCode: a.string(),
 			workAddressZipCode: a.string(),
 			workAddressCountryCode: a.string(),
-			dateLastContacted: a.datetime(),
+
 			notes: a.string(),
 			companyId: a.string().required(),
 			teams: a.hasMany("Team", "contactId"),
