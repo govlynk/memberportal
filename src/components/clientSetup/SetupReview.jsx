@@ -83,10 +83,9 @@ export function SetupReview({ setupData, onBack }) {
 
 			console.log("Creating Company", companyData);
 			const company = await addCompany(companyData);
-			console.log("Company Created", company);
 
 			if (!company?.id) {
-				throw new Error("Company creation failed - no company ID returned");
+				throw new Error("Company creation failed - invalid response");
 			}
 			console.log("Company Created", company);
 
