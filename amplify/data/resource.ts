@@ -1,3 +1,22 @@
+import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
+import { type DefaultAuthorizationMode } from "@aws-amplify/backend-data";
+
+const COMPANY_ROLES = [
+	"Executive",
+	"Sales",
+	"Marketing",
+	"Finance",
+	"Risk",
+	"Technology",
+	"Engineering",
+	"Operations",
+	"HumanResources",
+	"Legal",
+	"Contracting",
+	"Servicing",
+	"Other",
+] as const;
+
 const schema = a.schema({
 	User: a
 		.model({
