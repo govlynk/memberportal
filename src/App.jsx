@@ -1,20 +1,21 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Authenticator } from "@aws-amplify/ui-react";
 import { useAuthStore } from "./stores/authStore";
 import AppRouter from "./components/layout/AppRouter";
 
-export default function App() {
+// Separate component to handle authenticated state
+const AuthenticatedApp = ({ signOut, user }) => {
 	const initializeAuth = useAuthStore((state) => state.initialize);
 
-	useEffect(() => {
+	React.useEffect(() => {
 		if (user) {
 			initializeAuth(user);
 		}
 	}, [user, initializeAuth]);
 
-	return (
-		<Authenticator loginMechanisms={["email"]}>
-			{({ signOut, user }) => <AppRouter signOut={signOut} user={user} />}
-		</Authenticator>
-	);
+	return <AppRouter signOut={signOut} user={user} />;
+};
+
+export default function App() {
+	return <Authenticator loginMechanisms={["email"]}>{(props) => <AuthenticatedApp {...props} />}</Authenticator>;
 }
