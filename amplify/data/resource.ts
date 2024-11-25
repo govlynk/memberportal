@@ -117,7 +117,7 @@ const schema = a.schema({
 			lastName: a.string().required(),
 			title: a.string(),
 			department: a.string(),
-			contactEmail: a.email({ pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ }),
+			contactEmail: a.email(),
 			contactMobilePhone: a.string(),
 			contactBusinessPhone: a.string(),
 			workAddressStreetLine1: a.string(),
