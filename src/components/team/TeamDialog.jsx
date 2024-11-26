@@ -1,18 +1,5 @@
-import React, { useEffect, useState } from "react";
-import {
-	Dialog,
-	DialogTitle,
-	DialogContent,
-	DialogActions,
-	TextField,
-	Button,
-	Box,
-	FormControl,
-	InputLabel,
-	Select,
-	MenuItem,
-	Alert,
-} from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box, Alert } from "@mui/material";
 import { useTeamStore } from "../../stores/teamStore";
 
 const initialFormState = {

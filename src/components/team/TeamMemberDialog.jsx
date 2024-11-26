@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	Dialog,
 	DialogTitle,
 	DialogContent,
 	DialogActions,
-	TextField,
 	Button,
 	Box,
 	FormControl,
@@ -14,9 +13,13 @@ import {
 	Alert,
 } from "@mui/material";
 import { useTeamStore } from "../../stores/teamStore";
-import { useContactStore } from "../../stores/contactStore";
+import { generateClient } from "aws-amplify/data";
 
-const COMPANY_ROLES = [
+const client = generateClient({
+	authMode: "userPool",
+});
+
+const ROLES = [
 	"Executive",
 	"Sales",
 	"Marketing",
@@ -35,33 +38,45 @@ const COMPANY_ROLES = [
 const initialFormState = {
 	contactId: "",
 	role: "",
-	notes: "",
 };
 
-export function TeamMemberDialog({ open, onClose, teamId, editMember = null }) {
-	const { addTeamMember, updateTeamMember } = useTeamStore();
-	const { contacts, fetchContacts } = useContactStore();
+export function TeamMemberDialog({ open, onClose, team, companyId }) {
+	const { addTeamMember } = useTeamStore();
 	const [formData, setFormData] = useState(initialFormState);
+	const [contacts, setContacts] = useState([]);
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		if (open) {
+		if (open && companyId) {
 			fetchContacts();
 		}
-	}, [open, fetchContacts]);
+	}, [open, companyId]);
 
-	useEffect(() => {
-		if (editMember) {
-			setFormData({
-				contactId: editMember.contactId,
-				role: editMember.role,
-				notes: editMember.notes || "",
+	const fetchContacts = async () => {
+		setLoading(true);
+		try {
+			const response = await client.models.Contact.list({
+				filter: { companyId: { eq: companyId } },
 			});
-		} else {
-			setFormData(initialFormState);
+
+			if (!response?.data) {
+				throw new Error("Failed to fetch contacts");
+			}
+
+			// Filter out contacts that are already team members
+			const existingContactIds = team?.members?.map((member) => member.contactId) || [];
+			const availableContacts = response.data.filter((contact) => !existingContactIds.includes(contact.id));
+
+			setContacts(availableContacts);
+			setError(null);
+		} catch (err) {
+			console.error("Error fetching contacts:", err);
+			setError("Failed to load contacts");
+		} finally {
+			setLoading(false);
 		}
-	}, [editMember]);
+	};
 
 	const handleChange = (e) => {
 		const { name, value } = e.target;
@@ -74,11 +89,15 @@ export function TeamMemberDialog({ open, onClose, teamId, editMember = null }) {
 
 	const validateForm = () => {
 		if (!formData.contactId) {
-			setError("Contact is required");
+			setError("Please select a contact");
 			return false;
 		}
 		if (!formData.role) {
-			setError("Role is required");
+			setError("Please select a role");
+			return false;
+		}
+		if (!team?.id) {
+			setError("No team selected");
 			return false;
 		}
 		return true;
@@ -89,25 +108,16 @@ export function TeamMemberDialog({ open, onClose, teamId, editMember = null }) {
 
 		setLoading(true);
 		try {
-			const memberData = {
+			await addTeamMember({
+				teamId: team.id,
 				contactId: formData.contactId,
 				role: formData.role,
-				notes: formData.notes?.trim() || null,
-				status: "ACTIVE",
-			};
+			});
 
-			if (editMember) {
-				await updateTeamMember(editMember.id, memberData);
-			} else {
-				await addTeamMember({
-					teamId,
-					...memberData,
-				});
-			}
 			onClose();
 		} catch (err) {
-			console.error("Error saving team member:", err);
-			setError(err.message || "Failed to save team member");
+			console.error("Error adding team member:", err);
+			setError(err.message || "Failed to add team member");
 		} finally {
 			setLoading(false);
 		}
@@ -126,7 +136,7 @@ export function TeamMemberDialog({ open, onClose, teamId, editMember = null }) {
 				},
 			}}
 		>
-			<DialogTitle>{editMember ? "Edit Team Member" : "Add Team Member"}</DialogTitle>
+			<DialogTitle>Add Team Member</DialogTitle>
 			<DialogContent>
 				<Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
 					{error && (
@@ -140,7 +150,7 @@ export function TeamMemberDialog({ open, onClose, teamId, editMember = null }) {
 						<Select name='contactId' value={formData.contactId} onChange={handleChange} label='Contact'>
 							{contacts.map((contact) => (
 								<MenuItem key={contact.id} value={contact.id}>
-									{`${contact.firstName} ${contact.lastName}`}
+									{contact.firstName} {contact.lastName}
 								</MenuItem>
 							))}
 						</Select>
@@ -149,24 +159,13 @@ export function TeamMemberDialog({ open, onClose, teamId, editMember = null }) {
 					<FormControl fullWidth required disabled={loading}>
 						<InputLabel>Role</InputLabel>
 						<Select name='role' value={formData.role} onChange={handleChange} label='Role'>
-							{COMPANY_ROLES.map((role) => (
+							{ROLES.map((role) => (
 								<MenuItem key={role} value={role}>
 									{role}
 								</MenuItem>
 							))}
 						</Select>
 					</FormControl>
-
-					<TextField
-						fullWidth
-						label='Notes'
-						name='notes'
-						value={formData.notes}
-						onChange={handleChange}
-						multiline
-						rows={3}
-						disabled={loading}
-					/>
 				</Box>
 			</DialogContent>
 			<DialogActions>
@@ -174,7 +173,7 @@ export function TeamMemberDialog({ open, onClose, teamId, editMember = null }) {
 					Cancel
 				</Button>
 				<Button onClick={handleSubmit} variant='contained' disabled={loading}>
-					{loading ? "Saving..." : editMember ? "Save Changes" : "Add Member"}
+					{loading ? "Adding..." : "Add Member"}
 				</Button>
 			</DialogActions>
 		</Dialog>

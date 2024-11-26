@@ -14,7 +14,6 @@ export const useTeamStore = create((set, get) => ({
 	fetchTeams: async (companyId) => {
 		set({ loading: true });
 		try {
-			// First fetch all teams for the company
 			const subscription = client.models.Team.observeQuery({
 				filter: { companyId: { eq: companyId } },
 				include: {
@@ -46,7 +45,6 @@ export const useTeamStore = create((set, get) => ({
 	addTeam: async ({ companyId, name, description }) => {
 		set({ loading: true });
 		try {
-			// Create the team
 			const team = await client.models.Team.create({
 				companyId,
 				name,
@@ -74,7 +72,6 @@ export const useTeamStore = create((set, get) => ({
 				teamId,
 				contactId,
 				role,
-				status: "ACTIVE",
 			});
 
 			// Refresh the teams to get updated data
