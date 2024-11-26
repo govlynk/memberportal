@@ -34,69 +34,80 @@ export function SetupReview({ setupData, onBack }) {
 				throw new Error("User not authenticated");
 			}
 
-			// 1. Create company with only the fields defined in the schema
-			// const companyData = {
-			// 	legalBusinessName: setupData.company.legalBusinessName,
-			// 	dbaName: setupData.company.dbaName || null,
-			// 	uei: setupData.company.uei,
-			// 	cageCode: setupData.company.cageCode || null,
-			// 	ein: setupData.company.ein || null,
-			// 	companyEmail: setupData.company.companyEmail || null,
-			// 	companyPhoneNumber: setupData.company.companyPhoneNumber || null,
-			// 	companyWebsite: setupData.company.entityURL || null,
-			// 	status: "ACTIVE",
-			// 	billingAddressCity: setupData.company.billingAddressCity || null,
-			// 	billingAddressCountryCode: setupData.company.billingAddressCountryCode || null,
-			// 	billingAddressStateCode: setupData.company.billingAddressStateCode || null,
-			// 	billingAddressStreetLine1: setupData.company.billingAddressStreetLine1 || null,
-			// 	billingAddressStreetLine2: setupData.company.billingAddressStreetLine2 || null,
-			// 	billingAddressZipCode: setupData.company.billingAddressZipCode || null,
-			// 	shippingAddressCity: setupData.company.shippingAddressCity || null,
-			// 	shippingAddressCountryCode: setupData.company.shippingAddressCountryCode || null,
-			// 	shippingAddressStateCode: setupData.company.shippingAddressStateCode || null,
-			// 	shippingAddressStreetLine1: setupData.company.shippingAddressStreetLine1 || null,
-			// 	shippingAddressStreetLine2: setupData.company.shippingAddressStreetLine2 || null,
-			// 	shippingAddressZipCode: setupData.company.shippingAddressZipCode || null,
-			// };
-
-			// console.log("Creating company with data:", companyData);
-			// const company = await client.models.Company.create(companyData);
-			// console.log(company);
-
-			// if (!company?.id) {
-			// 	throw new Error("Company creation failed - invalid response");
-			// }
-			// console.log("Company created successfully:", company);
-
-			console.log("Creating company...");
+			// 1. Create company with all available fields from SAM.gov data
 			const companyData = {
+				// Basic Information
 				legalBusinessName: setupData.company.legalBusinessName,
 				dbaName: setupData.company.dbaName || null,
 				uei: setupData.company.uei,
 				cageCode: setupData.company.cageCode || null,
 				ein: setupData.company.ein || null,
-				companyEmail: setupData.user.email || null,
-				companyPhoneNumber: setupData.user.phone || null,
+				status: "ACTIVE",
+
+				// Contact Information
+				companyEmail: setupData.company.companyEmail || setupData.user.contactEmail || null,
+				companyPhoneNumber: setupData.company.companyPhoneNumber || setupData.user.contactBusinessPhone || null,
 				companyWebsite: setupData.company.entityURL
 					? setupData.company.entityURL.startsWith("http")
 						? setupData.company.entityURL
 						: `https://${setupData.company.entityURL}`
 					: null,
-				status: "ACTIVE",
-				billingAddressCity: setupData.company.billingAddressCity || null,
-				billingAddressCountryCode: setupData.company.billingAddressCountryCode || null,
-				billingAddressStateCode: setupData.company.billingAddressStateCode || null,
-				billingAddressStreetLine1: setupData.company.billingAddressStreetLine1 || null,
-				billingAddressStreetLine2: setupData.company.billingAddressStreetLine2 || null,
-				billingAddressZipCode: setupData.company.billingAddressZipCode || null,
-				shippingAddressCity: setupData.company.shippingAddressCity || null,
-				shippingAddressCountryCode: setupData.company.shippingAddressCountryCode || null,
-				shippingAddressStateCode: setupData.company.shippingAddressStateCode || null,
+
+				// Physical Address (Shipping)
 				shippingAddressStreetLine1: setupData.company.shippingAddressStreetLine1 || null,
 				shippingAddressStreetLine2: setupData.company.shippingAddressStreetLine2 || null,
+				shippingAddressCity: setupData.company.shippingAddressCity || null,
+				shippingAddressStateCode: setupData.company.shippingAddressStateCode || null,
 				shippingAddressZipCode: setupData.company.shippingAddressZipCode || null,
+				shippingAddressCountryCode: setupData.company.shippingAddressCountryCode || null,
+
+				// Mailing Address (Billing)
+				billingAddressStreetLine1: setupData.company.billingAddressStreetLine1 || null,
+				billingAddressStreetLine2: setupData.company.billingAddressStreetLine2 || null,
+				billingAddressCity: setupData.company.billingAddressCity || null,
+				billingAddressStateCode: setupData.company.billingAddressStateCode || null,
+				billingAddressZipCode: setupData.company.billingAddressZipCode || null,
+				billingAddressCountryCode: setupData.company.billingAddressCountryCode || null,
+
+				// Business Information
+				companyStartDate: new Date(setupData.company.companyStartDate).toISOString() || null,
+				entityStartDate: new Date(setupData.company.entityStartDate).toISOString() || null,
+				entityDivisionName: setupData.company.entityDivisionName || null,
+				entityStructureDesc: setupData.company.entityStructureDesc || null,
+				entityTypeDesc: setupData.company.entityTypeDesc || null,
+				organizationStructureDesc: setupData.company.organizationStructureDesc || null,
+				profitStructureDesc: setupData.company.profitStructureDesc || null,
+
+				// Registration Information
+				registrationDate: new Date(setupData.company.registrationDate).toISOString() || null,
+				registrationExpirationDate: new Date(setupData.company.registrationExpirationDate).toISOString() || null,
+				registrationStatus: setupData.company.registrationStatus || null,
+				purposeOfRegistrationDesc: setupData.company.purposeOfRegistrationDesc || null,
+				submissionDate: new Date(setupData.company.submissionDate).toISOString() || null,
+				lastUpdateDate: new Date(setupData.company.lastUpdateDate).toISOString() || null,
+				SAMPullDate: new Date().toISOString(),
+
+				// Location Information
+				congressionalDistrict: setupData.company.congressionalDistrict || null,
+				coreCongressionalDistrict: setupData.company.coreCongressionalDistrict || null,
+				stateOfIncorporationCode: setupData.company.stateOfIncorporationCode || null,
+				countryOfIncorporationCode: setupData.company.countryOfIncorporationCode || null,
+
+				// Business Classifications
+				primaryNaics: setupData.company.primaryNaics || null,
+				naicsCode: setupData.company.naicsCode || [],
+				pscCode: setupData.company.pscCode || [],
+				sbaBusinessTypeDesc: setupData.company.sbaBusinessTypeDesc || [],
+				// certificationEntryDate: new Date(setupData.company.certificationEntryDate).toISOString() || [],
+
+				// Additional Information
+				fiscalYearEndCloseDate: new Date(setupData.company.fiscalYearEndCloseDate).toISOString() || null,
+				exclusionStatusFlag: setupData.company.exclusionStatusFlag || null,
+				expirationDate: new Date(setupData.company.expirationDate).toISOString() || null,
+				activationDate: new Date(setupData.company.activationDate).toISOString() || null,
 			};
 
+			console.log("Creating company with data:", companyData);
 			const companyResponse = await client.models.Company.create(companyData);
 			console.log("Company created:", companyResponse);
 
@@ -127,10 +138,9 @@ export function SetupReview({ setupData, onBack }) {
 
 			console.log("Creating contact with data:", contactData);
 			const contactResponse = await client.models.Contact.create(contactData);
-			console.log("Created contact with data:", contactResponse);
+			console.log("Created contact:", contactResponse);
 
 			const contactId = contactResponse.data.id;
-			console.log("Contact created successfully:", contactResponse);
 
 			// 3. Create user
 			if (!setupData.user.contactEmail) {
@@ -138,17 +148,17 @@ export function SetupReview({ setupData, onBack }) {
 			}
 
 			const userData = {
-				cognitoId: setupData.user.cognitoId,
-				email: setupData.user.contactEmail || null,
-				name: `${setupData.user.firstName + " " + setupData.user.lastName}` || null,
-				phone: setupData.user.phone || null,
+				cognitoId: setupData.user.cognitoId || user.sub,
+				email: setupData.user.contactEmail,
+				name: `${setupData.user.firstName} ${setupData.user.lastName}`,
+				phone: setupData.user.contactBusinessPhone || setupData.user.contactMobilePhone || null,
 				status: "ACTIVE",
 				lastLogin: new Date().toISOString(),
-				avatar: setupData.user.avatar || null,
 			};
+
 			console.log("Creating user with data:", userData);
 			const userResponse = await client.models.User.create(userData);
-			console.log("User created successfully:", userResponse);
+			console.log("User created:", userResponse);
 
 			const userId = userResponse.data.id;
 
@@ -157,24 +167,23 @@ export function SetupReview({ setupData, onBack }) {
 				companyId: companyId,
 				contactId: contactId,
 				role: setupData.user.role,
-				// name: `${setupData.company.legalBusinessName} Team`,
 			};
 
 			console.log("Creating team with data:", teamData);
 			const teamResponse = await client.models.Team.create(teamData);
-			console.log("Team created successfully:", teamResponse);
+			console.log("Team created:", teamResponse);
 
 			// 5. Create user-company role
 			const userCompanyRoleData = {
 				userId: userId,
 				companyId: companyId,
-				roleId: "COMPANY_ADMIN",
+				roleId: setupData.user.accessLevel || "COMPANY_ADMIN",
 				status: "ACTIVE",
 			};
 
 			console.log("Creating user-company role with data:", userCompanyRoleData);
 			const userCompanyRole = await client.models.UserCompanyRole.create(userCompanyRoleData);
-			console.log("User-company role created successfully:", userCompanyRole);
+			console.log("User-company role created:", userCompanyRole);
 
 			setSuccess(true);
 		} catch (err) {

@@ -94,20 +94,8 @@ export default function TopBar() {
 			}}
 		>
 			<Toolbar sx={{ gap: 2 }}>
-				<Typography
-					variant='h6'
-					component='div'
-					sx={{
-						color: "text.primary",
-						minWidth: 200,
-					}}
-				>
-					GovLynk Portal
-				</Typography>
-
-				<Divider orientation='vertical' flexItem />
-
 				{user && <CompanySwitcher />}
+				<Divider orientation='vertical' flexItem />
 
 				<Box sx={{ flexGrow: 1 }} />
 
