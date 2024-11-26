@@ -49,8 +49,10 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 	// Fetch initial data
 	useEffect(() => {
 		if (open) {
+			console.log("Dialog opened, fetching companies...");
 			fetchCompanies();
 			if (editUser?.id) {
+				console.log("Editing user:", editUser);
 				fetchUserCompanyRoles(editUser.id);
 			}
 		}
@@ -58,13 +60,17 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 
 	// Fetch user's company roles
 	const fetchUserCompanyRoles = async (userId) => {
+		console.log("Fetching user company roles for userId:", userId);
 		try {
 			const response = await client.models.UserCompanyRole.list({
 				filter: { userId: { eq: userId } },
 			});
 
+			console.log("User company roles response:", response);
+
 			if (response?.data) {
 				setUserCompanyRoles(response.data);
+				setDebug((prev) => ({ ...prev, userCompanyRoles: response.data }));
 
 				// Fetch company details for each companyId
 				const companyIds = response.data.map((role) => role.companyId);
@@ -72,6 +78,9 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 					companyIds.map((companyId) => client.models.Company.get({ id: companyId }))
 				);
 				const selectedCompanies = companiesResponse.map((res) => res.data);
+
+				console.log("Selected companies:", selectedCompanies);
+				setDebug((prev) => ({ ...prev, selectedCompanies }));
 
 				setFormData((prev) => ({
 					...prev,
@@ -87,6 +96,7 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 	// Set initial form data when editing
 	useEffect(() => {
 		if (editUser) {
+			console.log("Setting form data for edit user:", editUser);
 			setFormData({
 				cognitoId: editUser.cognitoId || "",
 				email: editUser.email || "",
@@ -102,6 +112,7 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 
 	const handleChange = (e) => {
 		const { name, value } = e.target;
+		console.log("Form field changed:", name, value);
 		setFormData((prev) => ({
 			...prev,
 			[name]: value,
@@ -110,11 +121,13 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 	};
 
 	const handleCompanyChange = async (event, newValue) => {
+		console.log("Company selection changed:", newValue);
 		const newCompanies = newValue || [];
 		setFormData((prev) => ({
 			...prev,
 			selectedCompanies: newCompanies,
 		}));
+		setDebug((prev) => ({ ...prev, newCompanySelection: newCompanies }));
 	};
 
 	const validateForm = () => {
@@ -133,6 +146,7 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 		if (!validateForm()) return;
 
 		setLoading(true);
+		console.log("Submitting form with data:", formData);
 		try {
 			const userData = {
 				cognitoId: formData.cognitoId || currentUser?.sub,
@@ -145,23 +159,31 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 
 			let savedUser;
 			if (editUser) {
+				console.log("Updating existing user:", editUser.id);
 				savedUser = await updateUser(editUser.id, userData);
 
 				// Handle company associations
 				const currentCompanyIds = formData.selectedCompanies.map((c) => c.id);
 				const existingCompanyIds = userCompanyRoles.map((role) => role.companyId);
 
+				console.log("Current company IDs:", currentCompanyIds);
+				console.log("Existing company IDs:", existingCompanyIds);
+
 				// Remove associations that are no longer selected
 				const toRemove = userCompanyRoles.filter((role) => !currentCompanyIds.includes(role.companyId));
+				console.log("Roles to remove:", toRemove);
 
 				for (const role of toRemove) {
+					console.log("Removing role:", role.id);
 					await removeUserCompanyRole(role.id);
 				}
 
 				// Add new associations
 				const toAdd = currentCompanyIds.filter((id) => !existingCompanyIds.includes(id));
+				console.log("Companies to add:", toAdd);
 
 				for (const companyId of toAdd) {
+					console.log("Adding new role for company:", companyId);
 					await addUserCompanyRole({
 						userId: editUser.id,
 						companyId,
@@ -170,9 +192,11 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 					});
 				}
 			} else {
+				console.log("Creating new user");
 				savedUser = await addUser(userData);
 
 				// Create company associations for new user
+				console.log("Creating company associations for new user:", savedUser.id);
 				for (const company of formData.selectedCompanies) {
 					console.log("Adding role for company:", company.id);
 					await addUserCompanyRole({
@@ -184,13 +208,20 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 				}
 			}
 
+			console.log("Operation completed successfully");
 			onClose();
 		} catch (err) {
+			console.error("Error saving user:", err);
 			setError(err.message || "Failed to save user. Please check your input and try again.");
 		} finally {
 			setLoading(false);
 		}
 	};
+
+	// Debug output
+	console.log("Current debug state:", debug);
+	console.log("Current form data:", formData);
+	console.log("Current user company roles:", userCompanyRoles);
 
 	return (
 		<Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
