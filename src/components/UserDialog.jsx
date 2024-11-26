@@ -14,11 +14,17 @@ import {
 	Autocomplete,
 	Chip,
 	Alert,
+	CircularProgress,
 } from "@mui/material";
 import { useCompanyStore } from "../stores/companyStore";
 import { useUserStore } from "../stores/userStore";
 import { useUserCompanyRoleStore } from "../stores/userCompanyRoleStore";
 import { useAuthStore } from "../stores/authStore";
+import { generateClient } from "aws-amplify/data";
+
+const client = generateClient({
+	authMode: "userPool",
+});
 
 const initialFormState = {
 	cognitoId: "",
@@ -32,11 +38,15 @@ const initialFormState = {
 export const UserDialog = ({ open, onClose, editUser = null }) => {
 	const [formData, setFormData] = useState(initialFormState);
 	const [error, setError] = useState(null);
+	const [loading, setLoading] = useState(false);
 	const { companies, fetchCompanies } = useCompanyStore();
 	const { addUser, updateUser } = useUserStore();
-	const { addUserCompanyRole, removeUserCompanyRole, fetchUserCompanyRoles } = useUserCompanyRoleStore();
+	const { addUserCompanyRole, removeUserCompanyRole } = useUserCompanyRoleStore();
 	const currentUser = useAuthStore((state) => state.user);
+	const [userCompanyRoles, setUserCompanyRoles] = useState([]);
+	const [debug, setDebug] = useState({});
 
+	// Fetch initial data
 	useEffect(() => {
 		if (open) {
 			fetchCompanies();
@@ -44,24 +54,46 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 				fetchUserCompanyRoles(editUser.id);
 			}
 		}
-	}, [open, editUser?.id, fetchCompanies, fetchUserCompanyRoles]);
+	}, [open, editUser?.id]);
 
+	// Fetch user's company roles
+	const fetchUserCompanyRoles = async (userId) => {
+		try {
+			const response = await client.models.UserCompanyRole.list({
+				filter: { userId: { eq: userId } },
+			});
+
+			if (response?.data) {
+				setUserCompanyRoles(response.data);
+
+				// Fetch company details for each companyId
+				const companyIds = response.data.map((role) => role.companyId);
+				const companiesResponse = await Promise.all(
+					companyIds.map((companyId) => client.models.Company.get({ id: companyId }))
+				);
+				const selectedCompanies = companiesResponse.map((res) => res.data);
+
+				setFormData((prev) => ({
+					...prev,
+					selectedCompanies,
+				}));
+			}
+		} catch (err) {
+			console.error("Error fetching user company roles:", err);
+			setError("Failed to fetch user's company associations");
+		}
+	};
+
+	// Set initial form data when editing
 	useEffect(() => {
 		if (editUser) {
-			let userCompanies = [];
-			if (editUser.companies?.items) {
-				userCompanies = editUser.companies.items.map((item) => item.company).filter(Boolean);
-			} else if (Array.isArray(editUser.companies)) {
-				userCompanies = editUser.companies;
-			}
-
 			setFormData({
 				cognitoId: editUser.cognitoId || "",
 				email: editUser.email || "",
 				name: editUser.name || "",
 				phone: editUser.phone || "",
 				status: editUser.status || "ACTIVE",
-				selectedCompanies: userCompanies,
+				selectedCompanies: [], // Will be populated by fetchUserCompanyRoles
 			});
 		} else {
 			setFormData(initialFormState);
@@ -77,10 +109,11 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 		setError(null);
 	};
 
-	const handleCompanyChange = (event, newValue) => {
+	const handleCompanyChange = async (event, newValue) => {
+		const newCompanies = newValue || [];
 		setFormData((prev) => ({
 			...prev,
-			selectedCompanies: newValue || [],
+			selectedCompanies: newCompanies,
 		}));
 	};
 
@@ -93,19 +126,16 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 			setError("Name is required");
 			return false;
 		}
-		if (!currentUser?.sub) {
-			setError("You must be logged in to perform this action");
-			return false;
-		}
 		return true;
 	};
 
 	const handleSubmit = async () => {
 		if (!validateForm()) return;
 
+		setLoading(true);
 		try {
 			const userData = {
-				cognitoId: formData.cognitoId || currentUser.sub,
+				cognitoId: formData.cognitoId || currentUser?.sub,
 				email: formData.email.trim(),
 				name: formData.name.trim(),
 				phone: formData.phone?.trim() || "",
@@ -117,18 +147,20 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 			if (editUser) {
 				savedUser = await updateUser(editUser.id, userData);
 
+				// Handle company associations
 				const currentCompanyIds = formData.selectedCompanies.map((c) => c.id);
-				const existingCompanyIds = editUser.companies?.items?.map((c) => c.companyId) || [];
+				const existingCompanyIds = userCompanyRoles.map((role) => role.companyId);
 
-				const toRemove = existingCompanyIds.filter((id) => !currentCompanyIds.includes(id));
-				for (const companyId of toRemove) {
-					const association = editUser.companies?.items?.find((c) => c.companyId === companyId);
-					if (association?.id) {
-						await removeUserCompanyRole(association.id);
-					}
+				// Remove associations that are no longer selected
+				const toRemove = userCompanyRoles.filter((role) => !currentCompanyIds.includes(role.companyId));
+
+				for (const role of toRemove) {
+					await removeUserCompanyRole(role.id);
 				}
 
+				// Add new associations
 				const toAdd = currentCompanyIds.filter((id) => !existingCompanyIds.includes(id));
+
 				for (const companyId of toAdd) {
 					await addUserCompanyRole({
 						userId: editUser.id,
@@ -140,7 +172,9 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 			} else {
 				savedUser = await addUser(userData);
 
+				// Create company associations for new user
 				for (const company of formData.selectedCompanies) {
+					console.log("Adding role for company:", company.id);
 					await addUserCompanyRole({
 						userId: savedUser.id,
 						companyId: company.id,
@@ -152,14 +186,10 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 
 			onClose();
 		} catch (err) {
-			console.error("Error saving user:", err);
 			setError(err.message || "Failed to save user. Please check your input and try again.");
+		} finally {
+			setLoading(false);
 		}
-	};
-
-	const renderCompanyChip = (props, company, index) => {
-		const { onDelete } = props;
-		return <Chip key={company.id} label={company.legalBusinessName} onDelete={onDelete} size='small' />;
 	};
 
 	return (
@@ -188,6 +218,7 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 						value={formData.email}
 						onChange={handleChange}
 						error={!formData.email && Boolean(error)}
+						disabled={loading}
 					/>
 					<TextField
 						fullWidth
@@ -197,9 +228,17 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 						value={formData.name}
 						onChange={handleChange}
 						error={!formData.name && Boolean(error)}
+						disabled={loading}
 					/>
-					<TextField fullWidth label='Phone' name='phone' value={formData.phone} onChange={handleChange} />
-					<FormControl fullWidth>
+					<TextField
+						fullWidth
+						label='Phone'
+						name='phone'
+						value={formData.phone}
+						onChange={handleChange}
+						disabled={loading}
+					/>
+					<FormControl fullWidth disabled={loading}>
 						<InputLabel>Status</InputLabel>
 						<Select name='status' value={formData.status} onChange={handleChange} label='Status'>
 							<MenuItem value='ACTIVE'>Active</MenuItem>
@@ -213,20 +252,30 @@ export const UserDialog = ({ open, onClose, editUser = null }) => {
 						getOptionLabel={(option) => option?.legalBusinessName || ""}
 						value={formData.selectedCompanies}
 						onChange={handleCompanyChange}
+						disabled={loading}
 						renderInput={(params) => (
 							<TextField {...params} label='Associated Companies' placeholder='Select companies' />
 						)}
-						renderTags={(tagValue, getTagProps) =>
-							tagValue.map((company, index) => renderCompanyChip(getTagProps({ index }), company, index))
+						renderTags={(value, getTagProps) =>
+							value.map((company, index) => (
+								<Chip
+									key={company.id}
+									label={company.legalBusinessName}
+									{...getTagProps({ index })}
+									disabled={loading}
+								/>
+							))
 						}
 						isOptionEqualToValue={(option, value) => option?.id === value?.id}
 					/>
 				</Box>
 			</DialogContent>
 			<DialogActions>
-				<Button onClick={onClose}>Cancel</Button>
-				<Button onClick={handleSubmit} variant='contained'>
-					{editUser ? "Save Changes" : "Add User"}
+				<Button onClick={onClose} disabled={loading}>
+					Cancel
+				</Button>
+				<Button onClick={handleSubmit} variant='contained' disabled={loading}>
+					{loading ? "Saving..." : editUser ? "Save Changes" : "Add User"}
 				</Button>
 			</DialogActions>
 		</Dialog>

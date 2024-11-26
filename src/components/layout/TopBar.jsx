@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	AppBar,
 	Toolbar,
@@ -55,8 +55,15 @@ export default function TopBar() {
 	const navigate = useNavigate();
 	const [anchorEl, setAnchorEl] = useState(null);
 	const [isSigningOut, setIsSigningOut] = useState(false);
-	const { userCompanies } = useUserCompanyStore();
+	const { userCompanies, fetchUserCompanies } = useUserCompanyStore();
 	const { user, isAdmin, reset } = useAuthStore();
+
+	// Fetch user companies when component mounts
+	useEffect(() => {
+		if (user?.sub) {
+			fetchUserCompanies();
+		}
+	}, [user?.sub, fetchUserCompanies]);
 
 	const handleMenu = (event) => {
 		setAnchorEl(event.currentTarget);
@@ -109,7 +116,7 @@ export default function TopBar() {
 
 				<Divider orientation='vertical' flexItem />
 
-				{userCompanies?.length > 0 && <CompanySwitcher />}
+				{user && <CompanySwitcher />}
 
 				<Box sx={{ flexGrow: 1 }} />
 
