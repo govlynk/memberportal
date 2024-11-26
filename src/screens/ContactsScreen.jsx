@@ -44,6 +44,8 @@ export default function ContactsScreen() {
 	useEffect(() => {
 		if (selectedCompany) {
 			fetchContacts();
+		} else {
+			setContacts([]);
 		}
 	}, [selectedCompany]);
 
@@ -65,26 +67,15 @@ export default function ContactsScreen() {
 
 		setLoading(true);
 		try {
-			// First get all teams for the selected company
-			const teamsResponse = await client.models.Team.list({
+			const response = await client.models.Contact.list({
 				filter: { companyId: { eq: selectedCompany } },
 			});
 
-			// Then get all contacts for these teams
-			const contactIds = teamsResponse.data.map((team) => team.contactId);
-			const contactsData = await Promise.all(contactIds.map((id) => client.models.Contact.get({ id })));
+			if (!response?.data) {
+				throw new Error("Failed to fetch contacts");
+			}
 
-			// Combine team and contact data
-			const contactsWithRoles = contactsData.map((contact) => {
-				const team = teamsResponse.data.find((t) => t.contactId === contact.id);
-				return {
-					...contact,
-					role: team?.role || "Unknown",
-					teamId: team?.id,
-				};
-			});
-
-			setContacts(contactsWithRoles);
+			setContacts(response.data);
 			setError(null);
 		} catch (err) {
 			console.error("Error fetching contacts:", err);
@@ -96,7 +87,6 @@ export default function ContactsScreen() {
 
 	const handleCompanyChange = (event) => {
 		setSelectedCompany(event.target.value);
-		setContacts([]);
 	};
 
 	const handleAddClick = () => {
@@ -108,9 +98,14 @@ export default function ContactsScreen() {
 		setDialogOpen(true);
 	};
 
-	const handleEditClick = (contact) => {
-		setEditContact(contact);
-		setDialogOpen(true);
+	const handleEditClick = async (contact) => {
+		try {
+			setEditContact(contact);
+			setDialogOpen(true);
+		} catch (err) {
+			console.error("Error preparing contact for edit:", err);
+			setError("Failed to load contact details");
+		}
 	};
 
 	const handleDeleteClick = async (contact) => {
@@ -120,16 +115,9 @@ export default function ContactsScreen() {
 
 		setLoading(true);
 		try {
-			// First delete the team association
-			if (contact.teamId) {
-				await client.models.Team.delete({ id: contact.teamId });
-			}
-
-			// Then delete the contact
 			await client.models.Contact.delete({ id: contact.id });
-
-			// Refresh the contacts list
 			await fetchContacts();
+			setError(null);
 		} catch (err) {
 			console.error("Error deleting contact:", err);
 			setError("Failed to delete contact");
@@ -141,7 +129,9 @@ export default function ContactsScreen() {
 	const handleDialogClose = () => {
 		setDialogOpen(false);
 		setEditContact(null);
-		fetchContacts(); // Refresh contacts list
+		if (selectedCompany) {
+			fetchContacts();
+		}
 	};
 
 	return (
@@ -187,7 +177,7 @@ export default function ContactsScreen() {
 						<TableHead>
 							<TableRow>
 								<TableCell>Name</TableCell>
-								<TableCell>Role</TableCell>
+								<TableCell>Title</TableCell>
 								<TableCell>Department</TableCell>
 								<TableCell>Email</TableCell>
 								<TableCell>Phone</TableCell>
@@ -200,7 +190,7 @@ export default function ContactsScreen() {
 									<TableCell>
 										{contact.firstName} {contact.lastName}
 									</TableCell>
-									<TableCell>{contact.role}</TableCell>
+									<TableCell>{contact.title || "-"}</TableCell>
 									<TableCell>{contact.department || "-"}</TableCell>
 									<TableCell>
 										{contact.contactEmail ? (
@@ -237,7 +227,7 @@ export default function ContactsScreen() {
 									</TableCell>
 								</TableRow>
 							))}
-							{contacts.length === 0 && selectedCompany && (
+							{contacts.length === 0 && (
 								<TableRow>
 									<TableCell colSpan={6} align='center'>
 										No contacts found for this company

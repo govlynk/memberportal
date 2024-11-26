@@ -1,212 +1,294 @@
 import React, { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	Button,
+	Box,
+	FormControl,
+	InputLabel,
+	Select,
+	MenuItem,
+	Alert,
+	CircularProgress,
 } from "@mui/material";
 import { useUserCompanyRoleStore } from "../../stores/userCompanyRoleStore";
 import { generateClient } from "aws-amplify/data";
 
 const client = generateClient({
-  authMode: 'userPool'
+	authMode: "userPool",
 });
 
-const initialFormState = {
-  userId: "",
-  companyId: "",
-  roleId: "MEMBER",
-  status: "ACTIVE",
+// Define access level roles separately from company roles
+const ACCESS_LEVELS = {
+	ADMIN: "System Administrator",
+	COMPANY_ADMIN: "Company Administrator",
+	MANAGER: "Company Manager",
+	MEMBER: "Company Member",
 };
 
-export function UserCompanyRoleDialog({ open, onClose, editRole = null }) {
-  const { addUserCompanyRole, updateUserCompanyRole } = useUserCompanyRoleStore();
-  const [formData, setFormData] = useState(initialFormState);
-  const [users, setUsers] = useState([]);
-  const [companies, setCompanies] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+const initialFormState = {
+	userId: "",
+	companyId: "",
+	accessLevel: "MEMBER", // Changed from roleId to accessLevel for clarity
+	status: "ACTIVE",
+};
 
-  useEffect(() => {
-    if (open) {
-      fetchUsers();
-      fetchCompanies();
-    }
-  }, [open]);
+export function UserCompanyRoleDialog({ open, onClose, role = null, companyId }) {
+	const { addUserCompanyRole, updateUserCompanyRole } = useUserCompanyRoleStore();
+	const [formData, setFormData] = useState(initialFormState);
+	const [users, setUsers] = useState([]);
+	const [companies, setCompanies] = useState([]);
+	const [selectedCompany, setSelectedCompany] = useState(null);
+	const [error, setError] = useState(null);
+	const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (editRole) {
-      setFormData({
-        userId: editRole.userId,
-        companyId: editRole.companyId,
-        roleId: editRole.roleId,
-        status: editRole.status || "ACTIVE",
-      });
-    } else {
-      setFormData(initialFormState);
-    }
-  }, [editRole]);
+	// Fetch initial data when dialog opens
+	useEffect(() => {
+		if (open) {
+			fetchUsers();
+			if (!companyId) {
+				fetchCompanies();
+			} else {
+				fetchCompany(companyId);
+			}
+		}
+	}, [open, companyId]);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const userData = await client.models.User.list();
-      setUsers(userData.data);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      setError("Failed to load users");
-    } finally {
-      setLoading(false);
-    }
-  };
+	// Set form data when role or companyId changes
+	useEffect(() => {
+		if (role) {
+			setFormData({
+				userId: role.userId || "",
+				companyId: role.companyId || companyId || "",
+				accessLevel: role.roleId || "MEMBER",
+				status: role.status || "ACTIVE",
+			});
+			if (role.companyId) {
+				fetchCompany(role.companyId);
+			}
+		} else {
+			setFormData({
+				...initialFormState,
+				companyId: companyId || "",
+			});
+			if (companyId) {
+				fetchCompany(companyId);
+			}
+		}
+	}, [role, companyId]);
 
-  const fetchCompanies = async () => {
-    setLoading(true);
-    try {
-      const companyData = await client.models.Company.list();
-      setCompanies(companyData.data);
-    } catch (error) {
-      console.error("Error fetching companies:", error);
-      setError("Failed to load companies");
-    } finally {
-      setLoading(false);
-    }
-  };
+	const fetchUsers = async () => {
+		setLoading(true);
+		try {
+			const response = await client.models.User.list();
+			if (!response?.data) {
+				throw new Error("Failed to fetch users");
+			}
+			setUsers(response.data);
+			setError(null);
+		} catch (err) {
+			console.error("Error fetching users:", err);
+			setError(err.message || "Failed to load users");
+		} finally {
+			setLoading(false);
+		}
+	};
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setError(null);
-  };
+	const fetchCompany = async (id) => {
+		if (!id) return;
 
-  const handleSubmit = async () => {
-    try {
-      if (!formData.userId || !formData.companyId || !formData.roleId) {
-        setError("Please fill in all required fields");
-        return;
-      }
+		setLoading(true);
+		try {
+			const response = await client.models.Company.get({ id });
+			if (!response?.data) {
+				throw new Error("Failed to fetch company");
+			}
+			setSelectedCompany(response.data);
+			setCompanies([response.data]); // Ensure company is in the list for the select
+			setError(null);
+		} catch (err) {
+			console.error("Error fetching company:", err);
+			setError(err.message || "Failed to load company");
+		} finally {
+			setLoading(false);
+		}
+	};
 
-      setLoading(true);
-      if (editRole) {
-        await updateUserCompanyRole(editRole.id, formData);
-      } else {
-        await addUserCompanyRole(formData);
-      }
-      
-      onClose();
-    } catch (error) {
-      console.error("Error saving role:", error);
-      setError(error.message || "Failed to save role");
-    } finally {
-      setLoading(false);
-    }
-  };
+	const fetchCompanies = async () => {
+		setLoading(true);
+		try {
+			const response = await client.models.Company.list();
+			if (!response?.data) {
+				throw new Error("Failed to fetch companies");
+			}
+			setCompanies(response.data);
+			setError(null);
+		} catch (err) {
+			console.error("Error fetching companies:", err);
+			setError(err.message || "Failed to load companies");
+		} finally {
+			setLoading(false);
+		}
+	};
 
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        sx: {
-          bgcolor: "background.paper",
-          color: "text.primary",
-        },
-      }}
-    >
-      <DialogTitle>
-        {editRole ? "Edit Role Assignment" : "Add New Role Assignment"}
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+	const handleChange = (e) => {
+		const { name, value } = e.target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+		}));
 
-          <FormControl fullWidth required disabled={loading}>
-            <InputLabel>User</InputLabel>
-            <Select
-              name="userId"
-              value={formData.userId}
-              onChange={handleChange}
-              label="User"
-            >
-              {users.map((user) => (
-                <MenuItem key={user.id} value={user.id}>
-                  {user.name} ({user.email})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+		// If company changes, fetch the new company details
+		if (name === "companyId" && value) {
+			fetchCompany(value);
+		}
 
-          <FormControl fullWidth required disabled={loading}>
-            <InputLabel>Company</InputLabel>
-            <Select
-              name="companyId"
-              value={formData.companyId}
-              onChange={handleChange}
-              label="Company"
-            >
-              {companies.map((company) => (
-                <MenuItem key={company.id} value={company.id}>
-                  {company.legalBusinessName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+		setError(null);
+	};
 
-          <FormControl fullWidth required disabled={loading}>
-            <InputLabel>Role</InputLabel>
-            <Select
-              name="roleId"
-              value={formData.roleId}
-              onChange={handleChange}
-              label="Role"
-            >
-              <MenuItem value="ADMIN">Administrator</MenuItem>
-              <MenuItem value="MANAGER">Manager</MenuItem>
-              <MenuItem value="MEMBER">Team Member</MenuItem>
-            </Select>
-          </FormControl>
+	const validateForm = () => {
+		if (!formData.userId) {
+			setError("Please select a user");
+			return false;
+		}
+		if (!formData.companyId) {
+			setError("Please select a company");
+			return false;
+		}
+		if (!formData.accessLevel) {
+			setError("Please select an access level");
+			return false;
+		}
+		return true;
+	};
 
-          <FormControl fullWidth disabled={loading}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              label="Status"
-            >
-              <MenuItem value="ACTIVE">Active</MenuItem>
-              <MenuItem value="INACTIVE">Inactive</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>Cancel</Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
-          color="primary"
-          disabled={loading}
-        >
-          {editRole ? "Save Changes" : "Add Role"}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
+	const handleSubmit = async () => {
+		if (!validateForm()) return;
+
+		setLoading(true);
+		try {
+			const roleData = {
+				userId: formData.userId,
+				companyId: formData.companyId,
+				roleId: formData.accessLevel,
+				status: formData.status,
+			};
+
+			if (role?.id) {
+				await updateUserCompanyRole(role.id, roleData);
+			} else {
+				await addUserCompanyRole(roleData);
+			}
+
+			setError(null);
+			onClose();
+		} catch (err) {
+			console.error("Error saving role:", err);
+			setError(err.message || "Failed to save role. Please try again.");
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	if (loading && !users.length && !selectedCompany) {
+		return (
+			<Dialog open={open} onClose={onClose}>
+				<DialogContent>
+					<Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+						<CircularProgress />
+					</Box>
+				</DialogContent>
+			</Dialog>
+		);
+	}
+
+	return (
+		<Dialog
+			open={open}
+			onClose={onClose}
+			maxWidth='sm'
+			fullWidth
+			PaperProps={{
+				sx: {
+					bgcolor: "background.paper",
+					color: "text.primary",
+				},
+			}}
+		>
+			<DialogTitle>{role ? "Edit Access Level" : "Add New Access Level"}</DialogTitle>
+			<DialogContent>
+				<Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+					{error && (
+						<Alert severity='error' sx={{ mb: 2 }}>
+							{error}
+						</Alert>
+					)}
+
+					<FormControl fullWidth required disabled={loading}>
+						<InputLabel>User</InputLabel>
+						<Select name='userId' value={formData.userId} onChange={handleChange} label='User'>
+							{users.map((user) => (
+								<MenuItem key={user.id} value={user.id}>
+									{user.name} ({user.email})
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+
+					<FormControl fullWidth required disabled={loading || !!companyId}>
+						<InputLabel>Company</InputLabel>
+						<Select
+							name='companyId'
+							value={formData.companyId}
+							onChange={handleChange}
+							label='Company'
+							disabled={!!companyId}
+						>
+							{companies.map((company) => (
+								<MenuItem key={company.id} value={company.id}>
+									{company.legalBusinessName}
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+
+					{selectedCompany && (
+						<Alert severity='info' sx={{ mb: 2 }}>
+							Selected Company: {selectedCompany.legalBusinessName}
+							{selectedCompany.dbaName && ` (DBA: ${selectedCompany.dbaName})`}
+						</Alert>
+					)}
+
+					<FormControl fullWidth required disabled={loading}>
+						<InputLabel>Access Level</InputLabel>
+						<Select name='accessLevel' value={formData.accessLevel} onChange={handleChange} label='Access Level'>
+							{Object.entries(ACCESS_LEVELS).map(([value, label]) => (
+								<MenuItem key={value} value={value}>
+									{label}
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+
+					<FormControl fullWidth disabled={loading}>
+						<InputLabel>Status</InputLabel>
+						<Select name='status' value={formData.status} onChange={handleChange} label='Status'>
+							<MenuItem value='ACTIVE'>Active</MenuItem>
+							<MenuItem value='INACTIVE'>Inactive</MenuItem>
+						</Select>
+					</FormControl>
+				</Box>
+			</DialogContent>
+			<DialogActions>
+				<Button onClick={onClose} disabled={loading}>
+					Cancel
+				</Button>
+				<Button onClick={handleSubmit} variant='contained' color='primary' disabled={loading}>
+					{loading ? "Saving..." : role ? "Save Changes" : "Add Access Level"}
+				</Button>
+			</DialogActions>
+		</Dialog>
+	);
 }

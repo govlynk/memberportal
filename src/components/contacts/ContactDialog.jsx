@@ -7,10 +7,6 @@ import {
 	TextField,
 	Button,
 	Box,
-	FormControl,
-	InputLabel,
-	Select,
-	MenuItem,
 	Alert,
 	Grid,
 	Typography,
@@ -21,8 +17,6 @@ const client = generateClient({
 	authMode: "userPool",
 });
 
-const ROLES = ["EXECUTIVE", "SALES", "CUSTOMER_SERVICE", "MARKETING", "FINANCE", "LEGAL", "CONTRACTS", "ENGINEERING"];
-
 const initialFormState = {
 	firstName: "",
 	lastName: "",
@@ -31,7 +25,6 @@ const initialFormState = {
 	contactEmail: "",
 	contactMobilePhone: "",
 	contactBusinessPhone: "",
-	role: "",
 	workAddressStreetLine1: "",
 	workAddressStreetLine2: "",
 	workAddressCity: "",
@@ -49,8 +42,20 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 	useEffect(() => {
 		if (editContact) {
 			setFormData({
-				...editContact,
-				role: editContact.role || "",
+				firstName: editContact.firstName || "",
+				lastName: editContact.lastName || "",
+				title: editContact.title || "",
+				department: editContact.department || "",
+				contactEmail: editContact.contactEmail || "",
+				contactMobilePhone: editContact.contactMobilePhone || "",
+				contactBusinessPhone: editContact.contactBusinessPhone || "",
+				workAddressStreetLine1: editContact.workAddressStreetLine1 || "",
+				workAddressStreetLine2: editContact.workAddressStreetLine2 || "",
+				workAddressCity: editContact.workAddressCity || "",
+				workAddressStateCode: editContact.workAddressStateCode || "",
+				workAddressZipCode: editContact.workAddressZipCode || "",
+				workAddressCountryCode: editContact.workAddressCountryCode || "",
+				notes: editContact.notes || "",
 			});
 		} else {
 			setFormData(initialFormState);
@@ -73,10 +78,6 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 		}
 		if (!formData.lastName?.trim()) {
 			setError("Last name is required");
-			return false;
-		}
-		if (!formData.role?.trim()) {
-			setError("Role is required");
 			return false;
 		}
 		if (formData.contactEmail && !isValidEmail(formData.contactEmail)) {
@@ -118,23 +119,11 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 					id: editContact.id,
 					...contactData,
 				});
-
-				// Update team if role changed
-				if (editContact.teamId && formData.role !== editContact.role) {
-					await client.models.Team.update({
-						id: editContact.teamId,
-						role: formData.role,
-					});
-				}
 			} else {
 				// Create new contact
-				const contact = await client.models.Contact.create(contactData);
-
-				// Create team association
-				await client.models.Team.create({
+				await client.models.Contact.create({
+					...contactData,
 					companyId,
-					contactId: contact.id,
-					role: formData.role,
 				});
 			}
 
@@ -194,16 +183,14 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 						</Grid>
 
 						<Grid item xs={12} sm={6}>
-							<FormControl fullWidth required disabled={loading}>
-								<InputLabel>Role</InputLabel>
-								<Select name='role' value={formData.role} onChange={handleChange} label='Role'>
-									{ROLES.map((role) => (
-										<MenuItem key={role} value={role}>
-											{role.replace(/_/g, " ")}
-										</MenuItem>
-									))}
-								</Select>
-							</FormControl>
+							<TextField
+								fullWidth
+								label='Title'
+								name='title'
+								value={formData.title}
+								onChange={handleChange}
+								disabled={loading}
+							/>
 						</Grid>
 						<Grid item xs={12} sm={6}>
 							<TextField
@@ -219,9 +206,10 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 						<Grid item xs={12} sm={6}>
 							<TextField
 								fullWidth
-								label='Title'
-								name='title'
-								value={formData.title}
+								label='Email'
+								name='contactEmail'
+								type='email'
+								value={formData.contactEmail}
 								onChange={handleChange}
 								disabled={loading}
 							/>
@@ -229,10 +217,9 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 						<Grid item xs={12} sm={6}>
 							<TextField
 								fullWidth
-								label='Email'
-								name='contactEmail'
-								type='email'
-								value={formData.contactEmail}
+								label='Mobile Phone'
+								name='contactMobilePhone'
+								value={formData.contactMobilePhone}
 								onChange={handleChange}
 								disabled={loading}
 							/>
@@ -244,16 +231,6 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 								label='Business Phone'
 								name='contactBusinessPhone'
 								value={formData.contactBusinessPhone}
-								onChange={handleChange}
-								disabled={loading}
-							/>
-						</Grid>
-						<Grid item xs={12} sm={6}>
-							<TextField
-								fullWidth
-								label='Mobile Phone'
-								name='contactMobilePhone'
-								value={formData.contactMobilePhone}
 								onChange={handleChange}
 								disabled={loading}
 							/>
