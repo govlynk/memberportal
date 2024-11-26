@@ -65,10 +65,6 @@ export default function TeamScreen() {
 		setMemberDialogOpen(true);
 	};
 
-	const handleBack = () => {
-		navigate("/company");
-	};
-
 	const toggleTeamExpanded = (teamId) => {
 		setExpandedTeams((prev) => ({
 			...prev,
@@ -100,9 +96,6 @@ export default function TeamScreen() {
 		<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
 			<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
 				<Box>
-					<Button startIcon={<ArrowLeft />} onClick={handleBack} sx={{ mb: 2 }}>
-						Back to Companies
-					</Button>
 					<Typography variant='h4' sx={{ fontWeight: "bold" }}>
 						Teams
 					</Typography>
