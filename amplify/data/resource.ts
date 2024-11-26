@@ -113,10 +113,20 @@ const schema = a.schema({
 
 	Team: a
 		.model({
+			name: a.string().required(),
+			description: a.string(),
 			companyId: a.string().required(),
+			company: a.belongsTo("Company", "companyId"),
+			members: a.hasMany("TeamMember", "teamId"),
+		})
+		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
+
+	TeamMember: a
+		.model({
+			teamId: a.string().required(),
 			contactId: a.string().required(),
 			role: a.enum(COMPANY_ROLES),
-			company: a.belongsTo("Company", "companyId"),
+			team: a.belongsTo("Team", "teamId"),
 			contact: a.belongsTo("Contact", "contactId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
