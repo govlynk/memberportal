@@ -1,89 +1,120 @@
-import React from 'react';
-import {
-  Box,
-  Select,
-  MenuItem,
-  FormControl,
-  Typography,
-  Chip,
-} from '@mui/material';
-import { Building2 } from 'lucide-react';
-import { useUserCompanyStore } from '../../stores/userCompanyStore';
+import React, { useEffect } from "react";
+import { Box, Select, MenuItem, FormControl, Typography, Chip, CircularProgress } from "@mui/material";
+import { Building2 } from "lucide-react";
+import { useUserCompanyStore } from "../../stores/userCompanyStore";
+import { useAuthStore } from "../../stores/authStore";
 
 export function CompanySwitcher() {
-  const { 
-    userCompanies, 
-    activeCompanyId,
-    setActiveCompany,
-    loading 
-  } = useUserCompanyStore();
+	const { userCompanies, activeCompanyId, setActiveCompany, fetchUserCompanies, loading } = useUserCompanyStore();
+	const { user } = useAuthStore();
 
-  if (loading || userCompanies.length === 0) {
-    return null;
-  }
+	// Debug logging
+	useEffect(() => {
+		console.log("CompanySwitcher: Current state:", {
+			userCompanies,
+			activeCompanyId,
+			loading,
+			userId: user?.id,
+		});
+	}, [userCompanies, activeCompanyId, loading, user?.id]);
 
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      alignItems: 'center',
-      gap: 2,
-      minWidth: 300,
-      maxWidth: 400
-    }}>
-      <Building2 size={20} />
-      <FormControl fullWidth size="small">
-        <Select
-          value={activeCompanyId || ''}
-          onChange={(e) => setActiveCompany(e.target.value)}
-          displayEmpty
-          renderValue={(selected) => {
-            const company = userCompanies.find(c => c.id === selected);
-            if (!company) return <Typography color="text.secondary">Select a company</Typography>;
-            return (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="body2" noWrap>
-                  {company.legalBusinessName}
-                </Typography>
-                <Chip
-                  label={company.roleId}
-                  size="small"
-                  sx={{ ml: 'auto' }}
-                />
-              </Box>
-            );
-          }}
-          sx={{ 
-            '& .MuiSelect-select': { 
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              py: 1
-            }
-          }}
-        >
-          {userCompanies.map((company) => (
-            <MenuItem 
-              key={company.id} 
-              value={company.id}
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 2
-              }}
-            >
-              <Typography variant="body2" noWrap>
-                {company.legalBusinessName}
-              </Typography>
-              <Chip
-                label={company.roleId}
-                size="small"
-                sx={{ ml: 'auto' }}
-              />
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-    </Box>
-  );
+	// Fetch companies when component mounts or user changes
+	useEffect(() => {
+		if (user?.id) {
+			console.log("CompanySwitcher: Fetching companies for user:", user.id);
+			fetchUserCompanies();
+		}
+	}, [user?.id, fetchUserCompanies]);
+
+	// Set initial active company if none is selected
+	useEffect(() => {
+		if (userCompanies.length > 0 && !activeCompanyId) {
+			console.log("CompanySwitcher: Setting initial active company:", userCompanies[0].id);
+			setActiveCompany(userCompanies[0].id);
+		}
+	}, [userCompanies, activeCompanyId, setActiveCompany]);
+
+	const handleCompanyChange = (event) => {
+		const newCompanyId = event.target.value;
+		console.log("CompanySwitcher: Company selection changed to:", newCompanyId);
+		setActiveCompany(newCompanyId);
+	};
+
+	if (loading) {
+		return (
+			<Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+				<CircularProgress size={20} />
+			</Box>
+		);
+	}
+
+	if (!userCompanies?.length) {
+		console.log("CompanySwitcher: No companies available");
+		return null;
+	}
+
+	const renderCompanyDisplay = (company) => {
+		if (!company) return <Typography color='text.secondary'>Select a company</Typography>;
+
+		return (
+			<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+				<Typography variant='body2' noWrap>
+					{company.legalBusinessName}
+				</Typography>
+				<Chip label={company.roleId} size='small' sx={{ ml: "auto" }} />
+			</Box>
+		);
+	};
+
+	return (
+		<Box
+			sx={{
+				display: "flex",
+				alignItems: "center",
+				gap: 2,
+				minWidth: 300,
+				maxWidth: 400,
+			}}
+		>
+			<Building2 size={20} />
+			<FormControl fullWidth size='small'>
+				<Select
+					value={activeCompanyId || ""}
+					onChange={handleCompanyChange}
+					displayEmpty
+					renderValue={(selected) => {
+						const company = userCompanies.find((c) => c.id === selected);
+						console.log("CompanySwitcher: Rendering value for company:", company);
+						return renderCompanyDisplay(company || userCompanies[0]);
+					}}
+					sx={{
+						"& .MuiSelect-select": {
+							display: "flex",
+							alignItems: "center",
+							gap: 1,
+							py: 1,
+						},
+					}}
+				>
+					{userCompanies.map((company) => (
+						<MenuItem
+							key={company.id}
+							value={company.id}
+							sx={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "center",
+								gap: 2,
+							}}
+						>
+							<Typography variant='body2' noWrap>
+								{company.legalBusinessName}
+							</Typography>
+							<Chip label={company.roleId} size='small' sx={{ ml: "auto" }} />
+						</MenuItem>
+					))}
+				</Select>
+			</FormControl>
+		</Box>
+	);
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
 	AppBar,
 	Toolbar,
@@ -16,7 +16,6 @@ import { LogOut, User, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "aws-amplify/auth";
 import { CompanySwitcher } from "./CompanySwitcher";
-import { useUserCompanyStore } from "../../stores/userCompanyStore";
 import { useAuthStore } from "../../stores/authStore";
 
 function stringToColor(string) {
@@ -55,15 +54,7 @@ export default function TopBar() {
 	const navigate = useNavigate();
 	const [anchorEl, setAnchorEl] = useState(null);
 	const [isSigningOut, setIsSigningOut] = useState(false);
-	const { userCompanies, fetchUserCompanies } = useUserCompanyStore();
-	const { user, isAdmin, reset } = useAuthStore();
-
-	// Fetch user companies when component mounts
-	useEffect(() => {
-		if (user?.sub) {
-			fetchUserCompanies();
-		}
-	}, [user?.sub, fetchUserCompanies]);
+	const { user, reset } = useAuthStore();
 
 	const handleMenu = (event) => {
 		setAnchorEl(event.currentTarget);
@@ -172,7 +163,7 @@ export default function TopBar() {
 								Profile
 							</MenuItem>
 
-							{isAdmin && (
+							{user.isAdmin && (
 								<MenuItem onClick={() => navigate("/settings")}>
 									<ListItemIcon>
 										<Settings size={20} />

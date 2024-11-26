@@ -28,11 +28,13 @@ export const useAuthStore = create()(
 				}
 
 				try {
+					console.log("AuthStore: Initializing with cognitoUser:", cognitoUser);
+
 					// Extract basic auth information
 					const authInfo = {
 						username: cognitoUser.username,
 						userId: cognitoUser.userId,
-						sub: cognitoUser.userId, // Add sub for compatibility
+						sub: cognitoUser.userId,
 						email: cognitoUser.signInDetails?.loginId,
 						authFlowType: cognitoUser.signInDetails?.authFlowType,
 					};
@@ -41,19 +43,22 @@ export const useAuthStore = create()(
 					const groups = cognitoUser.signInUserSession?.accessToken?.payload?.["cognito:groups"] || [];
 					const isAdmin = groups.some((group) => typeof group === "string" && group.toLowerCase() === "admin");
 
-					// Fetch user data from database using the correct ID
+					// Fetch user data from database using email
+					console.log("AuthStore: Fetching user data for email:", authInfo.email);
 					const { data: users } = await client.models.User.list({
-						filter: { cognitoId: { eq: cognitoUser.userId } },
+						filter: { email: { eq: authInfo.email } },
 						limit: 1,
 					});
 
 					let userData = users?.[0];
+					console.log("AuthStore: Found user data:", userData);
 
 					if (!userData) {
 						// Create new user if doesn't exist
+						console.log("AuthStore: Creating new user");
 						const { data: newUser } = await client.models.User.create({
 							cognitoId: cognitoUser.userId,
-							email: cognitoUser.signInDetails?.loginId || "",
+							email: authInfo.email,
 							name: cognitoUser.username,
 							status: "ACTIVE",
 							lastLogin: new Date().toISOString(),
@@ -61,6 +66,7 @@ export const useAuthStore = create()(
 						userData = newUser;
 					} else {
 						// Update last login
+						console.log("AuthStore: Updating user last login");
 						const { data: updatedUser } = await client.models.User.update({
 							id: userData.id,
 							lastLogin: new Date().toISOString(),
@@ -69,18 +75,20 @@ export const useAuthStore = create()(
 					}
 
 					// Fetch user's company associations
+					console.log("AuthStore: Fetching user company roles");
 					const { data: userCompanyRoles } = await client.models.UserCompanyRole.list({
 						filter: { userId: { eq: userData.id } },
 						include: {
 							company: true,
-							role: true,
 						},
 					});
+
+					console.log("AuthStore: Found company roles:", userCompanyRoles);
 
 					// Create normalized user object
 					const normalizedUser = {
 						...userData,
-						...authInfo, // Include auth info in user object
+						...authInfo,
 						groups,
 						companies:
 							userCompanyRoles?.map((ucr) => ({
@@ -92,6 +100,8 @@ export const useAuthStore = create()(
 						signInUserSession: cognitoUser.signInUserSession,
 					};
 
+					console.log("AuthStore: Setting normalized user:", normalizedUser);
+
 					set({
 						user: normalizedUser,
 						isAuthenticated: true,
@@ -102,7 +112,7 @@ export const useAuthStore = create()(
 
 					return normalizedUser;
 				} catch (err) {
-					console.error("Error initializing auth:", err);
+					console.error("AuthStore: Error initializing auth:", err);
 					set({
 						error: "Failed to initialize authentication",
 						isAuthenticated: false,
@@ -119,6 +129,7 @@ export const useAuthStore = create()(
 				if (!currentUser?.id) return;
 
 				try {
+					console.log("AuthStore: Updating user profile:", updates);
 					const { data: updatedUser } = await client.models.User.update({
 						id: currentUser.id,
 						...updates,
@@ -133,12 +144,13 @@ export const useAuthStore = create()(
 
 					return updatedUser;
 				} catch (err) {
-					console.error("Error updating user profile:", err);
+					console.error("AuthStore: Error updating user profile:", err);
 					throw new Error("Failed to update user profile");
 				}
 			},
 
 			reset: () => {
+				console.log("AuthStore: Resetting state");
 				set({
 					user: null,
 					isAuthenticated: false,
