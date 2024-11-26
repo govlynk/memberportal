@@ -126,31 +126,48 @@ export function SetupReview({ setupData, onBack }) {
 			};
 
 			console.log("Creating contact with data:", contactData);
-			const contact = await client.models.Contact.create(contactData);
-			console.log("Contact created successfully:", contact);
+			const contactResponse = await client.models.Contact.create(contactData);
+			console.log("Created contact with data:", contactResponse);
 
-			if (!contact?.id) {
-				throw new Error("Contact creation failed");
+			const contactId = contactResponse.data.id;
+			console.log("Contact created successfully:", contactResponse);
+
+			// 3. Create user
+			if (!setupData.user.contactEmail) {
+				throw new Error("User email is required");
 			}
-			console.log("Contact created successfully:", contact);
 
-			// 3. Create team
+			const userData = {
+				cognitoId: setupData.user.cognitoId,
+				email: setupData.user.contactEmail || null,
+				name: `${setupData.user.firstName + " " + setupData.user.lastName}` || null,
+				phone: setupData.user.phone || null,
+				status: "ACTIVE",
+				lastLogin: new Date().toISOString(),
+				avatar: setupData.user.avatar || null,
+			};
+			console.log("Creating user with data:", userData);
+			const userResponse = await client.models.User.create(userData);
+			console.log("User created successfully:", userResponse);
+
+			const userId = userResponse.data.id;
+
+			// 4. Create team
 			const teamData = {
 				companyId: companyId,
-				contactId: contact.id,
+				contactId: contactId,
 				role: setupData.user.role,
-				name: `${setupData.company.legalBusinessName} Team`,
-				description: `Primary team for ${setupData.company.legalBusinessName}`,
+				// name: `${setupData.company.legalBusinessName} Team`,
 			};
 
 			console.log("Creating team with data:", teamData);
-			const team = await client.models.Team.create(teamData);
-			console.log("Team created successfully:", team);
+			const teamResponse = await client.models.Team.create(teamData);
+			console.log("Team created successfully:", teamResponse);
 
-			// 4. Create user-company role
+			// 5. Create user-company role
 			const userCompanyRoleData = {
-				userId: user.sub,
-				companyId: company.id,
+				userId: userId,
+				companyId: companyId,
 				roleId: "COMPANY_ADMIN",
 				status: "ACTIVE",
 			};

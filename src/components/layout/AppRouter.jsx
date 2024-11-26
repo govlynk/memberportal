@@ -11,6 +11,7 @@ import ContactsScreen from "../../screens/ContactsScreen";
 import SAMRegistrationScreen from "../../screens/SAMRegistrationScreen";
 import NotFoundPage from "../../screens/NotFoundPage";
 import MainLayout from "../layout/MainLayout";
+import ClienSetupScreen from "../../screens/ClientSetupScreen";
 
 const AppRouter = ({ signOut, user }) => {
 	return (
@@ -25,6 +26,7 @@ const AppRouter = ({ signOut, user }) => {
 				<Route path='team-admin' element={<TeamAdminScreen />} />
 				<Route path='admin' element={<AdminScreen />} />
 				<Route path='user-company-roles' element={<UserCompanyRoleScreen />} />
+				<Route path='client-setup' element={<ClienSetupScreen />} />
 				<Route path='contacts' element={<ContactsScreen />} />
 				<Route path='sam' element={<SAMRegistrationScreen />} />
 				<Route path='*' element={<NotFoundPage />} />

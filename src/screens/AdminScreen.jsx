@@ -29,7 +29,9 @@ import { generateClient } from "aws-amplify/data";
 import { getEntity } from "../utils/samApi";
 import { formatCompanyData } from "../utils/companyDataMapper";
 
-const client = generateClient();
+const client = generateClient({
+	authMode: "userPool",
+});
 
 export default function AdminScreen() {
 	const [uei, setUei] = useState("");
@@ -39,21 +41,36 @@ export default function AdminScreen() {
 	const [searchResult, setSearchResult] = useState(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editCompany, setEditCompany] = useState(null);
+	const [subscription, setSubscription] = useState(null);
 
 	useEffect(() => {
 		fetchCompanies();
+		return () => {
+			if (subscription) {
+				subscription.unsubscribe();
+			}
+		};
 	}, []);
 
 	const fetchCompanies = async () => {
 		setLoading(true);
 		try {
-			const response = await client.models.Company.list();
-			setCompanies(response.data);
-			setError(null);
+			const sub = client.models.Company.observeQuery().subscribe({
+				next: ({ items }) => {
+					setCompanies(items);
+					setLoading(false);
+					setError(null);
+				},
+				error: (err) => {
+					console.error("Error fetching companies:", err);
+					setError("Failed to load companies");
+					setLoading(false);
+				},
+			});
+			setSubscription(sub);
 		} catch (err) {
-			console.error("Error fetching companies:", err);
+			console.error("Error setting up subscription:", err);
 			setError("Failed to load companies");
-		} finally {
 			setLoading(false);
 		}
 	};
@@ -130,12 +147,9 @@ export default function AdminScreen() {
 				stateOfIncorporationCode: searchResult.stateOfIncorporationCode || null,
 				submissionDate: searchResult.submissionDate || null,
 			};
-
 			console.log(searchResult);
-			const companyResponse = await client.models.Company.create(searchResult);
-			console.log("Company created:", companyResponse);
-
-			await fetchCompanies();
+			const response = await client.models.Company.create(companyData);
+			console.log(response);
 			setDialogOpen(false);
 			setSearchResult(null);
 			setUei("");
@@ -154,7 +168,6 @@ export default function AdminScreen() {
 				id,
 				...updates,
 			});
-			await fetchCompanies();
 			setEditCompany(null);
 		} catch (err) {
 			console.error("Error updating company:", err);
@@ -169,8 +182,26 @@ export default function AdminScreen() {
 
 		setLoading(true);
 		try {
+			// First delete all associated UserCompanyRoles
+			const userCompanyRoles = await client.models.UserCompanyRole.list({
+				filter: { companyId: { eq: id } },
+			});
+
+			for (const role of userCompanyRoles.data) {
+				await client.models.UserCompanyRole.delete({ id: role.id });
+			}
+
+			// Then delete all associated Teams
+			const teams = await client.models.Team.list({
+				filter: { companyId: { eq: id } },
+			});
+
+			for (const team of teams.data) {
+				await client.models.Team.delete({ id: team.id });
+			}
+
+			// Finally delete the company
 			await client.models.Company.delete({ id });
-			await fetchCompanies();
 		} catch (err) {
 			console.error("Error deleting company:", err);
 			setError("Failed to delete company");

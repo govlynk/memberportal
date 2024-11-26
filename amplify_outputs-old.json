@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "us-east-1_aURQsO9wz",
+    "user_pool_id": "us-east-1_vsCUnwMnx",
     "aws_region": "us-east-1",
-    "user_pool_client_id": "18erqp34lnr9us54rjjffkn5sb",
-    "identity_pool_id": "us-east-1:97302502-0095-4487-84d6-d8dddbf66cf5",
+    "user_pool_client_id": "1upecc0hvtau47jffeo61tro72",
+    "identity_pool_id": "us-east-1:96568296-ded8-4a20-942b-3c39895afc49",
     "mfa_methods": [],
     "standard_required_attributes": [
       "email"
@@ -13,6 +13,33 @@
     ],
     "user_verification_types": [
       "email"
+    ],
+    "groups": [
+      {
+        "Admin": {
+          "precedence": 0
+        }
+      },
+      {
+        "CompanyAdmin": {
+          "precedence": 1
+        }
+      },
+      {
+        "GovLynkUser": {
+          "precedence": 2
+        }
+      },
+      {
+        "GovLynkConsultant": {
+          "precedence": 3
+        }
+      },
+      {
+        "CompanyUser": {
+          "precedence": 4
+        }
+      }
     ],
     "mfa_configuration": "NONE",
     "password_policy": {
@@ -25,9 +52,9 @@
     "unauthenticated_identities_enabled": true
   },
   "data": {
-    "url": "https://33bgz6v2r5bfrelcbsuc7kep5e.appsync-api.us-east-1.amazonaws.com/graphql",
+    "url": "https://jbhtxlevcfd3fod2uejs7u2dc4.appsync-api.us-east-1.amazonaws.com/graphql",
     "aws_region": "us-east-1",
-    "api_key": "da2-5kgx4sllg5dnbg6dgorryjj7fy",
+    "api_key": "da2-ssww6xquavhb7fla7go3hir7g4",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
       "API_KEY",
@@ -87,13 +114,6 @@
               "name": "lastLogin",
               "isArray": false,
               "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "avatar": {
-              "name": "avatar",
-              "isArray": false,
-              "type": "AWSURL",
               "isRequired": false,
               "attributes": []
             },
@@ -268,298 +288,6 @@
               "isRequired": false,
               "attributes": []
             },
-            "activationDate": {
-              "name": "activationDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "billingAddressCity": {
-              "name": "billingAddressCity",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "billingAddressCountryCode": {
-              "name": "billingAddressCountryCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "billingAddressStateCode": {
-              "name": "billingAddressStateCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "billingAddressStreetLine1": {
-              "name": "billingAddressStreetLine1",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "billingAddressStreetLine2": {
-              "name": "billingAddressStreetLine2",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "billingAddressZipCode": {
-              "name": "billingAddressZipCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "companyStartDate": {
-              "name": "companyStartDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "congressionalDistrict": {
-              "name": "congressionalDistrict",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "coreCongressionalDistrict": {
-              "name": "coreCongressionalDistrict",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "countryOfIncorporationCode": {
-              "name": "countryOfIncorporationCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "entityDivisionName": {
-              "name": "entityDivisionName",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "entityStartDate": {
-              "name": "entityStartDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "entityStructureDesc": {
-              "name": "entityStructureDesc",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "entityTypeDesc": {
-              "name": "entityTypeDesc",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "exclusionStatusFlag": {
-              "name": "exclusionStatusFlag",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "expirationDate": {
-              "name": "expirationDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "fiscalYearEndCloseDate": {
-              "name": "fiscalYearEndCloseDate",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "lastUpdateDate": {
-              "name": "lastUpdateDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "organizationStructureDesc": {
-              "name": "organizationStructureDesc",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "primaryNaics": {
-              "name": "primaryNaics",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "profitStructureDesc": {
-              "name": "profitStructureDesc",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "purposeOfRegistrationDesc": {
-              "name": "purposeOfRegistrationDesc",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "registrationDate": {
-              "name": "registrationDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "registrationExpirationDate": {
-              "name": "registrationExpirationDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "registrationStatus": {
-              "name": "registrationStatus",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "shippingAddressCity": {
-              "name": "shippingAddressCity",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "shippingAddressCountryCode": {
-              "name": "shippingAddressCountryCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "shippingAddressStateCode": {
-              "name": "shippingAddressStateCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "shippingAddressStreetLine1": {
-              "name": "shippingAddressStreetLine1",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "shippingAddressStreetLine2": {
-              "name": "shippingAddressStreetLine2",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "shippingAddressZipCode": {
-              "name": "shippingAddressZipCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "stateOfIncorporationCode": {
-              "name": "stateOfIncorporationCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "submissionDate": {
-              "name": "submissionDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "SAMPullDate": {
-              "name": "SAMPullDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "certificationEntryDate": {
-              "name": "certificationEntryDate",
-              "isArray": true,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": [],
-              "isArrayNullable": true
-            },
-            "keyWords": {
-              "name": "keyWords",
-              "isArray": true,
-              "type": "String",
-              "isRequired": false,
-              "attributes": [],
-              "isArrayNullable": true
-            },
-            "naicsCode": {
-              "name": "naicsCode",
-              "isArray": true,
-              "type": "String",
-              "isRequired": false,
-              "attributes": [],
-              "isArrayNullable": true
-            },
-            "pscCode": {
-              "name": "pscCode",
-              "isArray": true,
-              "type": "String",
-              "isRequired": false,
-              "attributes": [],
-              "isArrayNullable": true
-            },
-            "sbaBusinessTypeDesc": {
-              "name": "sbaBusinessTypeDesc",
-              "isArray": true,
-              "type": "String",
-              "isRequired": false,
-              "attributes": [],
-              "isArrayNullable": true
-            },
-            "entityURL": {
-              "name": "entityURL",
-              "isArray": false,
-              "type": "AWSURL",
-              "isRequired": false,
-              "attributes": []
-            },
             "users": {
               "name": "users",
               "isArray": true,
@@ -656,8 +384,8 @@
             "sortKeyFieldNames": []
           }
         },
-        "Contact": {
-          "name": "Contact",
+        "Role": {
+          "name": "Role",
           "fields": {
             "id": {
               "name": "id",
@@ -666,123 +394,33 @@
               "isRequired": true,
               "attributes": []
             },
-            "firstName": {
-              "name": "firstName",
+            "name": {
+              "name": "name",
               "isArray": false,
               "type": "String",
               "isRequired": true,
               "attributes": []
             },
-            "lastName": {
-              "name": "lastName",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "title": {
-              "name": "title",
+            "description": {
+              "name": "description",
               "isArray": false,
               "type": "String",
               "isRequired": false,
               "attributes": []
             },
-            "department": {
-              "name": "department",
-              "isArray": false,
+            "permissions": {
+              "name": "permissions",
+              "isArray": true,
               "type": "String",
               "isRequired": false,
-              "attributes": []
+              "attributes": [],
+              "isArrayNullable": true
             },
-            "contactEmail": {
-              "name": "contactEmail",
-              "isArray": false,
-              "type": "AWSEmail",
-              "isRequired": false,
-              "attributes": []
-            },
-            "dateLastContacted": {
-              "name": "dateLastContacted",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "contactMobilePhone": {
-              "name": "contactMobilePhone",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "contactBusinessPhone": {
-              "name": "contactBusinessPhone",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "workAddressStreetLine1": {
-              "name": "workAddressStreetLine1",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "workAddressStreetLine2": {
-              "name": "workAddressStreetLine2",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "workAddressCity": {
-              "name": "workAddressCity",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "workAddressStateCode": {
-              "name": "workAddressStateCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "workAddressZipCode": {
-              "name": "workAddressZipCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "workAddressCountryCode": {
-              "name": "workAddressCountryCode",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "notes": {
-              "name": "notes",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "companyId": {
-              "name": "companyId",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "teams": {
-              "name": "teams",
+            "userCompanyRoles": {
+              "name": "userCompanyRoles",
               "isArray": true,
               "type": {
-                "model": "Team"
+                "model": "UserCompanyRole"
               },
               "isRequired": false,
               "attributes": [],
@@ -790,7 +428,7 @@
               "association": {
                 "connectionType": "HAS_MANY",
                 "associatedWith": [
-                  "contactId"
+                  "roleId"
                 ]
               }
             },
@@ -812,7 +450,144 @@
             }
           },
           "syncable": true,
-          "pluralName": "Contacts",
+          "pluralName": "Roles",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "groupClaim": "cognito:groups",
+                    "provider": "userPools",
+                    "allow": "groups",
+                    "operations": [
+                      "create",
+                      "read",
+                      "update",
+                      "delete"
+                    ],
+                    "groups": [
+                      "Admin"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": false,
+            "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "UserCompanyRole": {
+          "name": "UserCompanyRole",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "userId": {
+              "name": "userId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "companyId": {
+              "name": "companyId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "roleId": {
+              "name": "roleId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "user": {
+              "name": "user",
+              "isArray": false,
+              "type": {
+                "model": "User"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "association": {
+                "connectionType": "BELONGS_TO",
+                "targetNames": [
+                  "userId"
+                ]
+              }
+            },
+            "company": {
+              "name": "company",
+              "isArray": false,
+              "type": {
+                "model": "Company"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "association": {
+                "connectionType": "BELONGS_TO",
+                "targetNames": [
+                  "companyId"
+                ]
+              }
+            },
+            "role": {
+              "name": "role",
+              "isArray": false,
+              "type": {
+                "model": "Role"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "association": {
+                "connectionType": "BELONGS_TO",
+                "targetNames": [
+                  "roleId"
+                ]
+              }
+            },
+            "status": {
+              "name": "status",
+              "isArray": false,
+              "type": {
+                "enum": "UserCompanyRoleStatus"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "UserCompanyRoles",
           "attributes": [
             {
               "type": "model",
@@ -885,10 +660,8 @@
             "role": {
               "name": "role",
               "isArray": false,
-              "type": {
-                "enum": "TeamRole"
-              },
-              "isRequired": false,
+              "type": "String",
+              "isRequired": true,
               "attributes": []
             },
             "company": {
@@ -985,8 +758,8 @@
             "sortKeyFieldNames": []
           }
         },
-        "UserCompanyRole": {
-          "name": "UserCompanyRole",
+        "Contact": {
+          "name": "Contact",
           "fields": {
             "id": {
               "name": "id",
@@ -995,63 +768,124 @@
               "isRequired": true,
               "attributes": []
             },
-            "userId": {
-              "name": "userId",
+            "firstName": {
+              "name": "firstName",
               "isArray": false,
               "type": "String",
               "isRequired": true,
               "attributes": []
             },
-            "companyId": {
-              "name": "companyId",
+            "lastName": {
+              "name": "lastName",
               "isArray": false,
               "type": "String",
               "isRequired": true,
               "attributes": []
             },
-            "roleId": {
-              "name": "roleId",
+            "title": {
+              "name": "title",
               "isArray": false,
               "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "status": {
-              "name": "status",
-              "isArray": false,
-              "type": {
-                "enum": "UserCompanyRoleStatus"
-              },
               "isRequired": false,
               "attributes": []
             },
-            "user": {
-              "name": "user",
+            "department": {
+              "name": "department",
               "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "contactEmail": {
+              "name": "contactEmail",
+              "isArray": false,
+              "type": "AWSEmail",
+              "isRequired": false,
+              "attributes": []
+            },
+            "contactMobilePhone": {
+              "name": "contactMobilePhone",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "contactBusinessPhone": {
+              "name": "contactBusinessPhone",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "workAddressStreetLine1": {
+              "name": "workAddressStreetLine1",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "workAddressStreetLine2": {
+              "name": "workAddressStreetLine2",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "workAddressCity": {
+              "name": "workAddressCity",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "workAddressStateCode": {
+              "name": "workAddressStateCode",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "workAddressZipCode": {
+              "name": "workAddressZipCode",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "workAddressCountryCode": {
+              "name": "workAddressCountryCode",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "dateLastContacted": {
+              "name": "dateLastContacted",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": []
+            },
+            "notes": {
+              "name": "notes",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "teams": {
+              "name": "teams",
+              "isArray": true,
               "type": {
-                "model": "User"
+                "model": "Team"
               },
               "isRequired": false,
               "attributes": [],
+              "isArrayNullable": true,
               "association": {
-                "connectionType": "BELONGS_TO",
-                "targetNames": [
-                  "userId"
-                ]
-              }
-            },
-            "company": {
-              "name": "company",
-              "isArray": false,
-              "type": {
-                "model": "Company"
-              },
-              "isRequired": false,
-              "attributes": [],
-              "association": {
-                "connectionType": "BELONGS_TO",
-                "targetNames": [
-                  "companyId"
+                "connectionType": "HAS_MANY",
+                "associatedWith": [
+                  "contactId"
                 ]
               }
             },
@@ -1073,7 +907,7 @@
             }
           },
           "syncable": true,
-          "pluralName": "UserCompanyRoles",
+          "pluralName": "Contacts",
           "attributes": [
             {
               "type": "model",
@@ -1300,24 +1134,6 @@
             "PENDING"
           ]
         },
-        "TeamRole": {
-          "name": "TeamRole",
-          "values": [
-            "Executive",
-            "Sales",
-            "Marketing",
-            "Finance",
-            "Risk",
-            "Technology",
-            "Engineering",
-            "Operations",
-            "HumanResources",
-            "Legal",
-            "Contracting",
-            "Servicing",
-            "Other"
-          ]
-        },
         "UserCompanyRoleStatus": {
           "name": "UserCompanyRoleStatus",
           "values": [
@@ -1345,5 +1161,5 @@
       "nonModels": {}
     }
   },
-  "version": "1.1"
+  "version": "1.3"
 }

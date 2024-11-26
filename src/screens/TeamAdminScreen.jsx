@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
 	Box,
 	Button,
+	CircularProgress,
 	Paper,
 	Table,
 	TableBody,
@@ -16,7 +17,6 @@ import {
 	Select,
 	MenuItem,
 	Alert,
-	CircularProgress,
 } from "@mui/material";
 import { UserPlus, Edit, Trash2, Mail, Phone } from "lucide-react";
 import { generateClient } from "aws-amplify/data";
@@ -30,6 +30,7 @@ export default function TeamAdminScreen() {
 	const [companies, setCompanies] = useState([]);
 	const [selectedCompany, setSelectedCompany] = useState("");
 	const [teams, setTeams] = useState([]);
+	const [contacts, setContacts] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -42,6 +43,7 @@ export default function TeamAdminScreen() {
 	useEffect(() => {
 		if (selectedCompany) {
 			fetchTeams();
+			fetchContacts();
 		}
 	}, [selectedCompany]);
 
@@ -50,38 +52,41 @@ export default function TeamAdminScreen() {
 		try {
 			const response = await client.models.Company.list();
 			setCompanies(response.data);
+			setLoading(false);
 		} catch (err) {
-			console.error("Error fetching companies:", err);
-			setError("Failed to load companies");
-		} finally {
+			setError("Failed to fetch companies");
 			setLoading(false);
 		}
 	};
 
 	const fetchTeams = async () => {
-		if (!selectedCompany) return;
-
 		setLoading(true);
 		try {
-			const teamsResponse = await client.models.Team.list({
+			const response = await client.models.Team.list({
 				filter: { companyId: { eq: selectedCompany } },
 			});
-
-			const teamsWithContacts = await Promise.all(
-				teamsResponse.data.map(async (team) => {
-					const contact = await client.models.Contact.get({ id: team.contactId });
-					return { ...team, contact };
-				})
-			);
-
-			setTeams(teamsWithContacts);
-			setError(null);
+			setTeams(response.data);
+			setLoading(false);
 		} catch (err) {
-			console.error("Error fetching teams:", err);
-			setError("Failed to load teams");
-		} finally {
+			setError("Failed to fetch teams");
 			setLoading(false);
 		}
+	};
+
+	const fetchContacts = async () => {
+		setLoading(true);
+		try {
+			const response = await client.models.Contact.list();
+			setContacts(response.data);
+			setLoading(false);
+		} catch (err) {
+			setError("Failed to fetch contacts");
+			setLoading(false);
+		}
+	};
+
+	const getContactDetails = (contactId) => {
+		return contacts.find((contact) => contact.id === contactId) || {};
 	};
 
 	const handleCompanyChange = (event) => {
@@ -107,50 +112,30 @@ export default function TeamAdminScreen() {
 		if (!window.confirm("Are you sure you want to delete this team member?")) {
 			return;
 		}
-
-		setLoading(true);
 		try {
-			// Delete the contact first
-			await client.models.Contact.delete({ id: team.contactId });
-
-			// Then delete the team
 			await client.models.Team.delete({ id: team.id });
-
-			// Refresh the teams list
-			await fetchTeams();
+			setTeams((prevTeams) => prevTeams.filter((t) => t.id !== team.id));
 		} catch (err) {
-			console.error("Error deleting team member:", err);
 			setError("Failed to delete team member");
-		} finally {
-			setLoading(false);
 		}
 	};
 
-	const handleDialogClose = () => {
-		setDialogOpen(false);
-		setEditTeam(null);
-		fetchTeams(); // Refresh teams list
-	};
-
 	return (
-		<Box sx={{ p: 3 }}>
-			<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-				<Typography variant='h4' sx={{ fontWeight: "bold" }}>
-					Team Management
-				</Typography>
-				<Button
-					variant='contained'
-					startIcon={<UserPlus size={20} />}
-					onClick={handleAddClick}
-					disabled={!selectedCompany}
-				>
-					Add Team Member
-				</Button>
-			</Box>
+		<Box>
+			{error && (
+				<Alert severity='error' sx={{ mb: 3 }}>
+					{error}
+				</Alert>
+			)}
 
 			<FormControl fullWidth sx={{ mb: 3 }}>
-				<InputLabel>Select Company</InputLabel>
-				<Select value={selectedCompany} onChange={handleCompanyChange} label='Select Company'>
+				<InputLabel id='company-select-label'>Select Company</InputLabel>
+				<Select
+					labelId='company-select-label'
+					value={selectedCompany}
+					label='Select Company'
+					onChange={handleCompanyChange}
+				>
 					{companies.map((company) => (
 						<MenuItem key={company.id} value={company.id}>
 							{company.legalBusinessName}
@@ -158,12 +143,6 @@ export default function TeamAdminScreen() {
 					))}
 				</Select>
 			</FormControl>
-
-			{error && (
-				<Alert severity='error' sx={{ mb: 3 }}>
-					{error}
-				</Alert>
-			)}
 
 			{loading ? (
 				<Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
@@ -183,65 +162,51 @@ export default function TeamAdminScreen() {
 							</TableRow>
 						</TableHead>
 						<TableBody>
-							{teams.map((team) => (
-								<TableRow key={team.id} hover>
-									<TableCell>
-										{team.contact?.firstName} {team.contact?.lastName}
-									</TableCell>
-									<TableCell>{team.role}</TableCell>
-									<TableCell>{team.contact?.department || "-"}</TableCell>
-									<TableCell>
-										{team.contact?.contactEmail ? (
-											<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-												<Mail size={16} />
-												{team.contact.contactEmail}
-											</Box>
-										) : (
-											"-"
-										)}
-									</TableCell>
-									<TableCell>
-										{team.contact?.contactBusinessPhone ? (
-											<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-												<Phone size={16} />
-												{team.contact.contactBusinessPhone}
-											</Box>
-										) : (
-											"-"
-										)}
-									</TableCell>
-									<TableCell align='right'>
-										<IconButton onClick={() => handleEditClick(team)} size='small' title='Edit Team Member'>
-											<Edit size={18} />
-										</IconButton>
-										<IconButton
-											onClick={() => handleDeleteClick(team)}
-											size='small'
-											color='error'
-											title='Delete Team Member'
-										>
-											<Trash2 size={18} />
-										</IconButton>
-									</TableCell>
-								</TableRow>
-							))}
-							{teams.length === 0 && selectedCompany && (
-								<TableRow>
-									<TableCell colSpan={6} align='center'>
-										No team members found for this company
-									</TableCell>
-								</TableRow>
-							)}
+							{teams.map((team) => {
+								const contact = getContactDetails(team.contactId);
+								return (
+									<TableRow key={team.id} hover>
+										<TableCell>
+											{contact.firstName} {contact.lastName}
+										</TableCell>
+										<TableCell>{team.role}</TableCell>
+										<TableCell>{contact.department || "-"}</TableCell>
+										<TableCell>
+											{contact.contactEmail ? (
+												<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+													<Mail size={16} />
+													{contact.contactEmail}
+												</Box>
+											) : (
+												"-"
+											)}
+										</TableCell>
+										<TableCell>{contact.contactMobilePhone || "-"}</TableCell>
+										<TableCell align='right'>
+											<IconButton onClick={() => handleEditClick(team)}>
+												<Edit />
+											</IconButton>
+											<IconButton onClick={() => handleDeleteClick(team)}>
+												<Trash2 />
+											</IconButton>
+										</TableCell>
+									</TableRow>
+								);
+							})}
 						</TableBody>
 					</Table>
 				</TableContainer>
 			)}
 
+			<Button variant='contained' color='primary' startIcon={<UserPlus />} onClick={handleAddClick} sx={{ mt: 3 }}>
+				Add Team Member
+			</Button>
+
 			<TeamAdminDialog
 				open={dialogOpen}
-				onClose={handleDialogClose}
-				editTeam={editTeam}
+				onClose={() => setDialogOpen(false)}
 				companyId={selectedCompany}
+				team={editTeam}
 			/>
 		</Box>
 	);
