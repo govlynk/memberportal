@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Box, Paper, Typography, useTheme, CircularProgress } from "@mui/material";
-import { useTodoStore } from "../stores/todoStore";
+import { useTodoStore } from "../../stores/todoStore";
 import { TodoItem } from "./TodoItem";
 import { EmptyColumn } from "./EmptyColumn";
 

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Box, Container } from "@mui/material";
-import { TodoDialog } from "../components/TodoDialog";
-import { TodoHeader } from "../components/TodoHeader";
-import { KanbanBoard } from "../components/KanbanBoard";
+import { TodoDialog } from "../components/toDo/TodoDialog";
+import { TodoHeader } from "../components/toDo/TodoHeader";
+import { KanbanBoard } from "../components/toDo/KanbanBoard";
 
 function TodoScreen() {
 	const [dialogOpen, setDialogOpen] = useState(false);
