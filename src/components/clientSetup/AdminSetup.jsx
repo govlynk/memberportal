@@ -14,21 +14,12 @@ import {
 } from "@mui/material";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
-const COMPANY_ROLES = [
-	"Executive",
-	"Sales",
-	"Marketing",
-	"Finance",
-	"Risk",
-	"Technology",
-	"Engineering",
-	"Operations",
-	"HumanResources",
-	"Legal",
-	"Contracting",
-	"Servicing",
-	"Other",
-];
+// Define access levels separately from company roles
+const ACCESS_LEVELS = {
+	COMPANY_ADMIN: "Company Administrator",
+	MANAGER: "Company Manager",
+	MEMBER: "Company Member",
+};
 
 export function AdminSetup({ onSubmit, onBack, companyData }) {
 	const theme = useTheme();
@@ -41,20 +32,19 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 		contactEmail: "",
 		contactMobilePhone: "",
 		contactBusinessPhone: "",
-		role: "",
 		workAddressStreetLine1: companyData?.shippingAddressStreetLine1 || "",
 		workAddressStreetLine2: companyData?.shippingAddressStreetLine2 || "",
 		workAddressCity: companyData?.shippingAddressCity || "",
-		workAddressStateCode: companyData?.shippingAddressStateOrProvinceCode || "",
+		workAddressStateCode: companyData?.shippingAddressStateCode || "",
 		workAddressZipCode: companyData?.shippingAddressZipCode || "",
-		workAddressCountryCode: companyData?.shippingAddressCuntryCode || "USA",
+		workAddressCountryCode: companyData?.shippingAddressCountryCode || "USA",
 		notes: "",
-		auth: "COMPANY_ADMIN",
+		accessLevel: "COMPANY_ADMIN", // Changed from role to accessLevel
 	});
 	const [errors, setErrors] = useState({});
 
 	useEffect(() => {
-		if (companyData?.shippingAddressCity != "") {
+		if (companyData?.shippingAddressCity) {
 			setFormData((prev) => ({
 				...prev,
 				workAddressStreetLine1: companyData.shippingAddressStreetLine1 || "",
@@ -62,7 +52,7 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 				workAddressCity: companyData.shippingAddressCity || "",
 				workAddressStateCode: companyData.shippingAddressStateCode || "",
 				workAddressZipCode: companyData.shippingAddressZipCode || "",
-				workAddressCountryCode: companyData.shippingAddressCuntryCode || "USA",
+				workAddressCountryCode: companyData.shippingAddressCountryCode || "USA",
 			}));
 		}
 	}, [companyData]);
@@ -84,7 +74,7 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 		if (!formData.firstName) newErrors.firstName = "First name is required";
 		if (!formData.lastName) newErrors.lastName = "Last name is required";
 		if (!formData.contactEmail) newErrors.contactEmail = "Email is required";
-		if (!formData.role) newErrors.role = "Company role is required";
+		if (!formData.accessLevel) newErrors.accessLevel = "Access level is required";
 
 		// Basic email validation
 		if (formData.contactEmail && !/\S+@\S+\.\S+/.test(formData.contactEmail)) {
@@ -97,10 +87,7 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 
 	const handleSubmit = () => {
 		if (validateForm()) {
-			onSubmit({
-				...formData,
-				accessLevel: "COMPANY_ADMIN",
-			});
+			onSubmit(formData);
 		}
 	};
 
@@ -177,19 +164,25 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 
 				<Grid item xs={12} md={6}>
 					<Typography variant='subtitle2' sx={{ mb: 2, color: "primary.main" }}>
-						Company Role
+						Company Position
 					</Typography>
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<FormControl fullWidth error={!!errors.role} required>
-							<InputLabel>Role</InputLabel>
-							<Select name='role' value={formData.role} onChange={handleChange} label='Role'>
-								{COMPANY_ROLES.map((role) => (
-									<MenuItem key={role} value={role}>
-										{role}
+						<FormControl fullWidth error={!!errors.accessLevel} required>
+							<InputLabel>Access Level</InputLabel>
+							<Select
+								name='accessLevel'
+								value={formData.accessLevel}
+								onChange={handleChange}
+								label='Access Level'
+							>
+								{Object.entries(ACCESS_LEVELS).map(([value, label]) => (
+									<MenuItem key={value} value={value}>
+										{label}
 									</MenuItem>
 								))}
 							</Select>
 						</FormControl>
+						<TextField fullWidth label='Title' name='title' value={formData.title} onChange={handleChange} />
 						<TextField
 							fullWidth
 							label='Department'
@@ -197,7 +190,6 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 							value={formData.department}
 							onChange={handleChange}
 						/>
-						<TextField fullWidth label='Title' name='title' value={formData.title} onChange={handleChange} />
 					</Box>
 				</Grid>
 
@@ -268,5 +260,3 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 		</Box>
 	);
 }
-
-export default AdminSetup;
