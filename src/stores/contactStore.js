@@ -1,9 +1,7 @@
 import { create } from "zustand";
-import { generateClient } from "aws-amplify/data";
+import { generateClient } from "aws-amplify/api";
 
-const client = generateClient({
-	authMode: "userPool",
-});
+const client = generateClient();
 
 export const useContactStore = create((set, get) => ({
 	contacts: [],
@@ -12,97 +10,93 @@ export const useContactStore = create((set, get) => ({
 	subscription: null,
 
 	fetchContacts: async (companyId) => {
-		set({ loading: true });
+		// Clear existing subscription if any
+		const currentSub = get().subscription;
+		if (currentSub) {
+			currentSub.unsubscribe();
+		}
+
+		set({ loading: true, error: null });
+
 		try {
+			// Create new subscription
 			const subscription = client.models.Contact.observeQuery({
 				filter: { companyId: { eq: companyId } },
-				include: {
-					user: true,
-					teams: {
-						include: {
-							team: true,
-						},
-					},
-				},
 			}).subscribe({
 				next: ({ items }) => {
 					set({
 						contacts: items,
 						loading: false,
+						error: null,
 					});
 				},
 				error: (err) => {
-					console.error("Fetch contacts error:", err);
-					set({ error: "Failed to fetch contacts", loading: false });
+					console.error("Error fetching contacts:", err);
+					set({
+						error: err.message || "Failed to fetch contacts",
+						loading: false,
+					});
 				},
 			});
+
+			// Store the subscription
 			set({ subscription });
 		} catch (err) {
-			console.error("Fetch contacts error:", err);
-			set({ error: "Failed to fetch contacts", loading: false });
+			console.error("Error setting up contacts subscription:", err);
+			set({
+				error: err.message || "Failed to load contacts",
+				loading: false,
+			});
 		}
 	},
 
 	addContact: async (contactData) => {
-		set({ loading: true });
+		set({ loading: true, error: null });
 		try {
-			const contact = await client.models.Contact.create(contactData);
-
-			set((state) => ({
-				contacts: [...state.contacts, contact],
-				loading: false,
-				error: null,
-			}));
-
-			return contact;
+			await client.models.Contact.create(contactData);
+			// Don't manually update the contacts array - let the subscription handle it
+			set({ loading: false });
 		} catch (err) {
-			console.error("Create contact error:", err);
-			set({ error: err.message || "Failed to create contact", loading: false });
+			console.error("Error creating contact:", err);
+			set({
+				error: err.message || "Failed to create contact",
+				loading: false,
+			});
 			throw err;
 		}
 	},
 
 	updateContact: async (id, updates) => {
+		set({ loading: true, error: null });
 		try {
-			const updatedContact = await client.models.Contact.update({
+			await client.models.Contact.update({
 				id,
 				...updates,
 			});
-
-			set((state) => ({
-				contacts: state.contacts.map((contact) => (contact.id === id ? updatedContact : contact)),
-				error: null,
-			}));
-
-			return updatedContact;
+			// Don't manually update the contacts array - let the subscription handle it
+			set({ loading: false });
 		} catch (err) {
 			console.error("Error updating contact:", err);
-			set({ error: "Failed to update contact" });
+			set({
+				error: err.message || "Failed to update contact",
+				loading: false,
+			});
 			throw err;
 		}
 	},
 
 	removeContact: async (id) => {
+		set({ loading: true, error: null });
 		try {
-			// First remove all team memberships
-			const teamMembers = await client.models.TeamMember.list({
-				filter: { contactId: { eq: id } },
-			});
-
-			for (const member of teamMembers.data) {
-				await client.models.TeamMember.delete({ id: member.id });
-			}
-
-			// Then remove the contact
 			await client.models.Contact.delete({ id });
-
-			set((state) => ({
-				contacts: state.contacts.filter((contact) => contact.id !== id),
-				error: null,
-			}));
+			// Don't manually update the contacts array - let the subscription handle it
+			set({ loading: false });
 		} catch (err) {
 			console.error("Error removing contact:", err);
-			set({ error: "Failed to remove contact" });
+			set({
+				error: err.message || "Failed to remove contact",
+				loading: false,
+			});
 			throw err;
 		}
 	},
@@ -112,5 +106,11 @@ export const useContactStore = create((set, get) => ({
 		if (subscription) {
 			subscription.unsubscribe();
 		}
+		set({
+			contacts: [],
+			subscription: null,
+			loading: false,
+			error: null,
+		});
 	},
 }));

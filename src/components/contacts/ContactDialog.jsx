@@ -9,122 +9,110 @@ import {
 	Box,
 	Alert,
 	Grid,
-	Typography,
+	CircularProgress,
 } from "@mui/material";
-import { generateClient } from "aws-amplify/data";
+import { useContactStore } from "../../stores/contactStore";
+import { useUserCompanyStore } from "../../stores/userCompanyStore";
 
-const client = generateClient({
-	authMode: "userPool",
-});
+export function ContactDialog({ open, onClose, contact }) {
+	const { addContact, updateContact } = useContactStore();
+	const { getActiveCompany } = useUserCompanyStore();
+	const activeCompany = getActiveCompany();
 
-const initialFormState = {
-	firstName: "",
-	lastName: "",
-	title: "",
-	department: "",
-	contactEmail: "",
-	contactMobilePhone: "",
-	contactBusinessPhone: "",
-	workAddressStreetLine1: "",
-	workAddressStreetLine2: "",
-	workAddressCity: "",
-	workAddressStateCode: "",
-	workAddressZipCode: "",
-	workAddressCountryCode: "",
-	notes: "",
-};
-
-export function ContactDialog({ open, onClose, editContact = null, companyId }) {
-	const [formData, setFormData] = useState(initialFormState);
+	const [formData, setFormData] = useState({
+		firstName: "",
+		lastName: "",
+		title: "",
+		department: "",
+		contactEmail: "",
+		contactMobilePhone: "",
+		contactBusinessPhone: "",
+		notes: "",
+	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 
 	useEffect(() => {
-		if (editContact) {
+		if (contact) {
 			setFormData({
-				firstName: editContact.firstName || "",
-				lastName: editContact.lastName || "",
-				title: editContact.title || "",
-				department: editContact.department || "",
-				contactEmail: editContact.contactEmail || "",
-				contactMobilePhone: editContact.contactMobilePhone || "",
-				contactBusinessPhone: editContact.contactBusinessPhone || "",
-				workAddressStreetLine1: editContact.workAddressStreetLine1 || "",
-				workAddressStreetLine2: editContact.workAddressStreetLine2 || "",
-				workAddressCity: editContact.workAddressCity || "",
-				workAddressStateCode: editContact.workAddressStateCode || "",
-				workAddressZipCode: editContact.workAddressZipCode || "",
-				workAddressCountryCode: editContact.workAddressCountryCode || "",
-				notes: editContact.notes || "",
+				firstName: contact.firstName || "",
+				lastName: contact.lastName || "",
+				title: contact.title || "",
+				department: contact.department || "",
+				contactEmail: contact.contactEmail || "",
+				contactMobilePhone: contact.contactMobilePhone || "",
+				contactBusinessPhone: contact.contactBusinessPhone || "",
+				notes: contact.notes || "",
 			});
 		} else {
-			setFormData(initialFormState);
+			setFormData({
+				firstName: "",
+				lastName: "",
+				title: "",
+				department: "",
+				contactEmail: "",
+				contactMobilePhone: "",
+				contactBusinessPhone: "",
+				notes: "",
+			});
 		}
-	}, [editContact]);
+	}, [contact]);
 
-	const handleChange = (e) => {
-		const { name, value } = e.target;
-		setFormData((prev) => ({
-			...prev,
-			[name]: value,
-		}));
-		setError(null);
+	const validateEmail = (email) => {
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+	};
+
+	const validatePhone = (phone) => {
+		return !phone || /^\+?[\d\s-]{10,}$/.test(phone);
 	};
 
 	const validateForm = () => {
-		if (!formData.firstName?.trim()) {
+		if (!formData.firstName.trim()) {
 			setError("First name is required");
 			return false;
 		}
-		if (!formData.lastName?.trim()) {
+		if (!formData.lastName.trim()) {
 			setError("Last name is required");
 			return false;
 		}
-		if (formData.contactEmail && !isValidEmail(formData.contactEmail)) {
+		if (!formData.contactEmail.trim()) {
+			setError("Email is required");
+			return false;
+		}
+		if (!validateEmail(formData.contactEmail)) {
 			setError("Invalid email format");
+			return false;
+		}
+		if (!validatePhone(formData.contactMobilePhone)) {
+			setError("Invalid mobile phone format");
+			return false;
+		}
+		if (!validatePhone(formData.contactBusinessPhone)) {
+			setError("Invalid business phone format");
 			return false;
 		}
 		return true;
 	};
 
-	const isValidEmail = (email) => {
-		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-	};
-
 	const handleSubmit = async () => {
 		if (!validateForm()) return;
+		if (!activeCompany?.id) {
+			setError("No active company selected");
+			return;
+		}
 
 		setLoading(true);
 		try {
 			const contactData = {
-				firstName: formData.firstName.trim(),
-				lastName: formData.lastName.trim(),
-				title: formData.title?.trim() || null,
-				department: formData.department?.trim() || null,
-				contactEmail: formData.contactEmail?.trim() || null,
-				contactMobilePhone: formData.contactMobilePhone?.trim() || null,
-				contactBusinessPhone: formData.contactBusinessPhone?.trim() || null,
-				workAddressStreetLine1: formData.workAddressStreetLine1?.trim() || null,
-				workAddressStreetLine2: formData.workAddressStreetLine2?.trim() || null,
-				workAddressCity: formData.workAddressCity?.trim() || null,
-				workAddressStateCode: formData.workAddressStateCode?.trim() || null,
-				workAddressZipCode: formData.workAddressZipCode?.trim() || null,
-				workAddressCountryCode: formData.workAddressCountryCode?.trim() || null,
-				notes: formData.notes?.trim() || null,
+				...formData,
+				companyId: activeCompany.id,
+				dateLastContacted: new Date().toISOString(),
 			};
 
-			if (editContact) {
-				// Update existing contact
-				await client.models.Contact.update({
-					id: editContact.id,
-					...contactData,
-				});
+			if (contact?.id) {
+				await updateContact(contact.id, contactData);
 			} else {
-				// Create new contact
-				await client.models.Contact.create({
-					...contactData,
-					companyId,
-				});
+				await addContact(contactData);
 			}
 
 			onClose();
@@ -136,20 +124,18 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 		}
 	};
 
+	const handleChange = (e) => {
+		const { name, value } = e.target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+		}));
+		setError(null);
+	};
+
 	return (
-		<Dialog
-			open={open}
-			onClose={onClose}
-			maxWidth='md'
-			fullWidth
-			PaperProps={{
-				sx: {
-					bgcolor: "background.paper",
-					color: "text.primary",
-				},
-			}}
-		>
-			<DialogTitle>{editContact ? "Edit Contact" : "Add New Contact"}</DialogTitle>
+		<Dialog open={open} onClose={onClose} maxWidth='md' fullWidth aria-labelledby='contact-dialog-title'>
+			<DialogTitle id='contact-dialog-title'>{contact ? "Edit Contact" : "Add New Contact"}</DialogTitle>
 			<DialogContent>
 				<Box sx={{ mt: 2 }}>
 					{error && (
@@ -168,6 +154,7 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 								onChange={handleChange}
 								required
 								disabled={loading}
+								inputProps={{ "aria-label": "First Name" }}
 							/>
 						</Grid>
 						<Grid item xs={12} sm={6}>
@@ -179,27 +166,7 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 								onChange={handleChange}
 								required
 								disabled={loading}
-							/>
-						</Grid>
-
-						<Grid item xs={12} sm={6}>
-							<TextField
-								fullWidth
-								label='Title'
-								name='title'
-								value={formData.title}
-								onChange={handleChange}
-								disabled={loading}
-							/>
-						</Grid>
-						<Grid item xs={12} sm={6}>
-							<TextField
-								fullWidth
-								label='Department'
-								name='department'
-								value={formData.department}
-								onChange={handleChange}
-								disabled={loading}
+								inputProps={{ "aria-label": "Last Name" }}
 							/>
 						</Grid>
 
@@ -211,7 +178,9 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 								type='email'
 								value={formData.contactEmail}
 								onChange={handleChange}
+								required
 								disabled={loading}
+								inputProps={{ "aria-label": "Email" }}
 							/>
 						</Grid>
 						<Grid item xs={12} sm={6}>
@@ -222,6 +191,7 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 								value={formData.contactMobilePhone}
 								onChange={handleChange}
 								disabled={loading}
+								inputProps={{ "aria-label": "Mobile Phone" }}
 							/>
 						</Grid>
 
@@ -233,64 +203,30 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 								value={formData.contactBusinessPhone}
 								onChange={handleChange}
 								disabled={loading}
+								inputProps={{ "aria-label": "Business Phone" }}
 							/>
 						</Grid>
-
-						<Grid item xs={12}>
-							<Typography variant='subtitle1' sx={{ mb: 1 }}>
-								Work Address
-							</Typography>
-						</Grid>
-
-						<Grid item xs={12}>
-							<TextField
-								fullWidth
-								label='Street Address Line 1'
-								name='workAddressStreetLine1'
-								value={formData.workAddressStreetLine1}
-								onChange={handleChange}
-								disabled={loading}
-							/>
-						</Grid>
-						<Grid item xs={12}>
-							<TextField
-								fullWidth
-								label='Street Address Line 2'
-								name='workAddressStreetLine2'
-								value={formData.workAddressStreetLine2}
-								onChange={handleChange}
-								disabled={loading}
-							/>
-						</Grid>
-
 						<Grid item xs={12} sm={6}>
 							<TextField
 								fullWidth
-								label='City'
-								name='workAddressCity'
-								value={formData.workAddressCity}
+								label='Title'
+								name='title'
+								value={formData.title}
 								onChange={handleChange}
 								disabled={loading}
+								inputProps={{ "aria-label": "Title" }}
 							/>
 						</Grid>
-						<Grid item xs={12} sm={3}>
+
+						<Grid item xs={12}>
 							<TextField
 								fullWidth
-								label='State'
-								name='workAddressStateCode'
-								value={formData.workAddressStateCode}
+								label='Department'
+								name='department'
+								value={formData.department}
 								onChange={handleChange}
 								disabled={loading}
-							/>
-						</Grid>
-						<Grid item xs={12} sm={3}>
-							<TextField
-								fullWidth
-								label='ZIP Code'
-								name='workAddressZipCode'
-								value={formData.workAddressZipCode}
-								onChange={handleChange}
-								disabled={loading}
+								inputProps={{ "aria-label": "Department" }}
 							/>
 						</Grid>
 
@@ -304,6 +240,7 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 								multiline
 								rows={3}
 								disabled={loading}
+								inputProps={{ "aria-label": "Notes" }}
 							/>
 						</Grid>
 					</Grid>
@@ -313,8 +250,13 @@ export function ContactDialog({ open, onClose, editContact = null, companyId }) 
 				<Button onClick={onClose} disabled={loading}>
 					Cancel
 				</Button>
-				<Button onClick={handleSubmit} variant='contained' disabled={loading}>
-					{loading ? "Saving..." : editContact ? "Save Changes" : "Add Contact"}
+				<Button
+					onClick={handleSubmit}
+					variant='contained'
+					disabled={loading}
+					startIcon={loading ? <CircularProgress size={20} /> : null}
+				>
+					{loading ? "Saving..." : contact ? "Save Changes" : "Add Contact"}
 				</Button>
 			</DialogActions>
 		</Dialog>
