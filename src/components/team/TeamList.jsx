@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import {
 	Box,
-	Button,
 	Card,
+	CardContent,
+	CardHeader,
+	Collapse,
+	Button,
 	IconButton,
 	Table,
 	TableBody,
@@ -14,12 +17,15 @@ import {
 	Typography,
 	Chip,
 	Alert,
+	Divider,
 	CircularProgress,
+	List,
 } from "@mui/material";
-import { Edit, Trash2, UserPlus, Filter, Search } from "lucide-react";
+import { Edit, Trash2, UserPlus, Filter, Search, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { TeamDialog } from "./TeamDialog";
 import { TeamMemberDialog } from "./TeamMemberDialog";
 import { useTeamStore } from "../../stores/teamStore";
+import { useTeamMemberStore } from "../../stores/teamMemberStore";
 import { useUserCompanyStore } from "../../stores/userCompanyStore";
 
 export function TeamList() {
@@ -27,16 +33,30 @@ export function TeamList() {
 	const [teamDialogOpen, setTeamDialogOpen] = useState(false);
 	const [memberDialogOpen, setMemberDialogOpen] = useState(false);
 	const [selectedTeam, setSelectedTeam] = useState(null);
+	const [expandedTeamId, setExpandedTeamId] = useState(null);
 
 	const { teams, removeTeam, loading, error, fetchTeams } = useTeamStore();
+	const { teamMembers, removeTeamMember, loadingMember, errorMember, fetchTeamMembers } = useTeamMemberStore();
 	const { getActiveCompany } = useUserCompanyStore();
 	const activeCompany = getActiveCompany();
 
 	useEffect(() => {
-		if (activeCompany?.id) {
-			fetchTeams(activeCompany.id);
-		}
-	}, [activeCompany?.id, fetchTeams]);
+		const fetchTeamsAndMembers = async () => {
+			if (activeCompany?.id) {
+				const fetchedTeams = await fetchTeams(activeCompany.id);
+				if (Array.isArray(fetchedTeams)) {
+					for (const team of fetchedTeams) {
+						const teamMembers = await fetchTeamMembers(team.id);
+						console.log(`Team: ${team.name}`, teamMembers);
+					}
+				}
+			}
+		};
+
+		fetchTeamsAndMembers();
+	}, [activeCompany?.id, fetchTeams, fetchTeamMembers]);
+
+	console.log("fetchTeamMembers", teamMembers);
 
 	const filteredTeams =
 		teams?.filter(
@@ -65,6 +85,10 @@ export function TeamList() {
 		}
 	};
 
+	const handleExpandTeam = (teamId) => {
+		setExpandedTeamId(expandedTeamId === teamId ? null : teamId);
+	};
+
 	if (!activeCompany) {
 		return (
 			<Alert severity='warning' sx={{ mt: 2 }}>
@@ -89,7 +113,7 @@ export function TeamList() {
 				</Alert>
 			)}
 
-			<Typography variant='h4' sx={{ mb: 4, fontWeight: "bold" }}>
+			<Typography variant='h4' component='h1' sx={{ mb: 4, fontWeight: "bold" }}>
 				Team Management
 			</Typography>
 
@@ -113,28 +137,19 @@ export function TeamList() {
 				</Button>
 			</Box>
 
-			<TableContainer component={Card}>
-				<Table>
-					<TableHead>
-						<TableRow>
-							<TableCell>Team Name</TableCell>
-							<TableCell>Description</TableCell>
-							<TableCell>Members</TableCell>
-							<TableCell>Created</TableCell>
-							<TableCell align='right'>Actions</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody>
-						{filteredTeams.length > 0 ? (
-							filteredTeams.map((team) => (
-								<TableRow key={team.id}>
-									<TableCell>{team.name}</TableCell>
-									<TableCell>{team.description || "-"}</TableCell>
-									<TableCell>
-										<Chip label={`${team.members?.length || 0} members`} size='small' />
-									</TableCell>
-									<TableCell>{team.createdAt ? new Date(team.createdAt).toLocaleDateString() : "-"}</TableCell>
-									<TableCell align='right'>
+			<Box sx={{ display: "grid", gap: 3, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
+				{filteredTeams.length > 0 ? (
+					filteredTeams.map((team) => (
+						<Card key={team.id} sx={{ height: "100%" }}>
+							<CardHeader
+								title={team.name}
+								subheader={
+									<Typography variant='body2' component='div' color='text.secondary'>
+										Created {new Date(team.createdAt).toLocaleDateString()}
+									</Typography>
+								}
+								action={
+									<Box sx={{ display: "flex", gap: 1 }}>
 										<IconButton onClick={() => handleAddMembers(team)} size='small' title='Add Members'>
 											<UserPlus size={18} />
 										</IconButton>
@@ -149,19 +164,82 @@ export function TeamList() {
 										>
 											<Trash2 size={18} />
 										</IconButton>
-									</TableCell>
-								</TableRow>
-							))
-						) : (
-							<TableRow>
-								<TableCell colSpan={5} align='center'>
-									No teams found
-								</TableCell>
-							</TableRow>
-						)}
-					</TableBody>
-				</Table>
-			</TableContainer>
+									</Box>
+								}
+							/>
+							<Divider />
+							<CardContent>
+								<Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
+									{team.description || "No description"}
+								</Typography>
+
+								<Box
+									sx={{
+										display: "flex",
+										justifyContent: "space-between",
+										alignItems: "center",
+										mb: 1,
+									}}
+								>
+									<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+										<Users size={16} />
+										<Typography variant='subtitle2' component='div'>
+											{Array.isArray(team.members) ? team.members.length : 0} Members
+										</Typography>
+									</Box>
+									<IconButton
+										onClick={() => handleExpandTeam(team.id)}
+										size='small'
+										sx={{ transform: expandedTeamId === team.id ? "rotate(180deg)" : "none" }}
+									>
+										{expandedTeamId === team.id ? <ChevronUp /> : <ChevronDown />}
+									</IconButton>
+								</Box>
+
+								<Collapse in={expandedTeamId === team.id}>
+									<List sx={{ mt: 1 }}>
+										{Array.isArray(team.members) && team.members.length > 0 ? (
+											team.members.map((member) => (
+												<Box
+													key={member.id}
+													sx={{
+														display: "flex",
+														justifyContent: "space-between",
+														alignItems: "center",
+														p: 1,
+														borderRadius: 1,
+														"&:hover": {
+															bgcolor: "action.hover",
+														},
+													}}
+												>
+													<Box>
+														<Typography variant='body2'>
+															{member.contact.firstName} {member.contact.lastName}
+														</Typography>
+														<Typography variant='caption' color='text.secondary'>
+															{member.contact.contactEmail}
+														</Typography>
+													</Box>
+													<Chip label={member.role} size='small' variant='outlined' color='primary' />
+												</Box>
+											))
+										) : (
+											<Typography variant='body2' color='text.secondary' align='center' sx={{ py: 2 }}>
+												No members yet
+											</Typography>
+										)}
+									</List>
+								</Collapse>
+							</CardContent>
+						</Card>
+					))
+				) : (
+					<Box sx={{ textAlign: "center", gridColumn: "1 / -1", py: 4 }}>
+						<Typography color='text.secondary'>No teams found</Typography>
+					</Box>
+				)}
+			</Box>
 
 			<TeamDialog
 				open={teamDialogOpen}
@@ -178,8 +256,7 @@ export function TeamList() {
 					setMemberDialogOpen(false);
 					setSelectedTeam(null);
 				}}
-				team={selectedTeam}
-				activeCompanyId={activeCompany?.id} // Pass activeCompanyId to TeamMemberDialog
+				team={selectedTeam} // Pass the entire team object
 			/>
 		</Box>
 	);
