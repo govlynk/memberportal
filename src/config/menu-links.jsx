@@ -26,12 +26,12 @@ export const menuLinks = [
 		icon: Users,
 		links: [
 			{
-				title: "Manage Team",
-				path: "/team",
+				title: "Manage Contacts",
+				path: "/contacts",
 			},
 			{
-				title: "Manage Users",
-				path: "/users",
+				title: "Manage Team",
+				path: "/team",
 			},
 			{
 				title: "SAM Registration",
@@ -82,28 +82,24 @@ export const menuLinks = [
 		icon: Settings,
 		links: [
 			{
-				title: "Company Admin",
-				path: "/admin",
-			},
-			{
 				title: "Client Setup",
 				path: "/client-setup",
 			},
 			{
-				title: "Contact Admin",
-				path: "/contacts",
+				title: "Company Admin",
+				path: "/admin",
 			},
 			{
-				title: "Team Admin",
-				path: "/team-admin",
+				title: "User Admin",
+				path: "/user-admin",
+			},
+			{
+				title: "Contact Admin",
+				path: "/contact-admin",
 			},
 			{
 				title: "User Company Roles",
 				path: "/user-company-roles",
-			},
-			{
-				title: "Account Admin",
-				path: "/account-admin",
 			},
 			{
 				title: "Color Sections",
