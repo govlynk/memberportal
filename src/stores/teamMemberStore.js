@@ -1,108 +1,130 @@
 import { create } from "zustand";
-import { generateClient } from "aws-amplify/api";
+import { generateClient } from "aws-amplify/data";
 
-const client = generateClient({
-	authMode: "userPool",
-});
+const client = generateClient();
 
-export const useTeamMemberStore = create((set, get) => ({
+export const useTeamMemberStore = create((set) => ({
 	teamMembers: [],
 	loading: false,
 	error: null,
-	subscription: null,
 
 	fetchTeamMembers: async (teamId) => {
-		console.log("TeamMemberStore: Starting fetchTeamMembers for teamId:", teamId);
 		if (!teamId) {
-			console.error("TeamMemberStore: No teamId provided");
 			set({ error: "Team ID is required", loading: false });
 			return;
 		}
 
 		set({ loading: true });
 		try {
-			const subscription = client.models.TeamMember.observeQuery({
+			const response = await client.models.TeamMember.list({
 				filter: { teamId: { eq: teamId } },
 				include: {
 					contact: true,
 				},
-			}).subscribe({
-				next: ({ items }) => {
-					console.log("TeamMemberStore: Received team members update:", items);
-					set({
-						teamMembers: items,
-						loading: false,
-						error: null,
-					});
-				},
-				error: (err) => {
-					console.error("TeamMemberStore: Subscription error:", err);
-					set({ error: "Failed to fetch team members", loading: false });
-				},
 			});
-			set({ subscription });
+
+			if (!response?.data) {
+				throw new Error("Failed to fetch team members");
+			}
+
+			set({
+				teamMembers: response.data,
+				loading: false,
+				error: null,
+			});
 		} catch (err) {
-			console.error("TeamMemberStore: Error in fetchTeamMembers:", err);
-			set({ error: "Failed to fetch team members", loading: false });
+			console.error("Error fetching team members:", err);
+			set({
+				error: err.message || "Failed to fetch team members",
+				loading: false,
+			});
 		}
 	},
 
 	addTeamMember: async ({ teamId, contactId, role }) => {
-		console.log("TeamMemberStore: Adding team member:", { teamId, contactId, role });
+		if (!teamId || !contactId || !role) {
+			throw new Error("Team ID, Contact ID, and Role are required");
+		}
+
 		set({ loading: true });
 		try {
-			// Check if contact is already a member of any team
+			// Check if contact is already a member
 			const existingMember = await client.models.TeamMember.list({
-				filter: { contactId: { eq: contactId } },
+				filter: {
+					and: [{ teamId: { eq: teamId } }, { contactId: { eq: contactId } }],
+				},
 			});
 
 			if (existingMember.data?.length > 0) {
-				throw new Error("Contact is already a member of another team");
+				throw new Error("Contact is already a member of this team");
 			}
 
-			const teamMember = await client.models.TeamMember.create({
+			const response = await client.models.TeamMember.create({
 				teamId,
 				contactId,
 				role,
+				status: "ACTIVE",
 			});
 
+			if (!response?.data) {
+				throw new Error("Failed to add team member");
+			}
+
 			set((state) => ({
-				teamMembers: [...state.teamMembers, teamMember],
+				teamMembers: [...state.teamMembers, response.data],
 				loading: false,
 				error: null,
 			}));
-			return teamMember;
+
+			return response.data;
 		} catch (err) {
-			console.error("TeamMemberStore: Error adding team member:", err);
-			set({ error: err.message || "Failed to add team member", loading: false });
+			console.error("Error adding team member:", err);
+			set({
+				error: err.message || "Failed to add team member",
+				loading: false,
+			});
 			throw err;
 		}
 	},
 
 	updateTeamMember: async (id, updates) => {
-		console.log("TeamMemberStore: Updating team member:", { id, updates });
+		if (!id) {
+			throw new Error("Team member ID is required");
+		}
+
 		set({ loading: true });
 		try {
-			const updatedMember = await client.models.TeamMember.update({
+			const response = await client.models.TeamMember.update({
 				id,
 				...updates,
 			});
 
+			if (!response?.data) {
+				throw new Error("Failed to update team member");
+			}
+
 			set((state) => ({
-				teamMembers: state.teamMembers.map((member) => (member.id === id ? updatedMember : member)),
+				teamMembers: state.teamMembers.map((member) => (member.id === id ? response.data : member)),
 				loading: false,
 				error: null,
 			}));
-			return updatedMember;
+
+			return response.data;
 		} catch (err) {
-			console.error("TeamMemberStore: Error updating team member:", err);
-			set({ error: "Failed to update team member", loading: false });
+			console.error("Error updating team member:", err);
+			set({
+				error: err.message || "Failed to update team member",
+				loading: false,
+			});
 			throw err;
 		}
 	},
 
 	removeTeamMember: async (id) => {
-		console.log("TeamMemberStore: Removing team member:", id);
+		if (!id) {
+			throw new Error("Team member ID is required");
+		}
+
 		set({ loading: true });
 		try {
 			await client.models.TeamMember.delete({ id });
@@ -113,18 +135,12 @@ export const useTeamMemberStore = create((set, get) => ({
 				error: null,
 			}));
 		} catch (err) {
-			console.error("TeamMemberStore: Error removing team member:", err);
-			set({ error: "Failed to remove team member", loading: false });
+			console.error("Error removing team member:", err);
+			set({
+				error: err.message || "Failed to remove team member",
+				loading: false,
+			});
 			throw err;
-		}
-	},
-
-	cleanup: () => {
-		console.log("TeamMemberStore: Cleaning up subscription");
-		const { subscription } = get();
-		if (subscription) {
-			subscription.unsubscribe();
-			set({ subscription: null });
 		}
 	},
 }));

@@ -1,136 +1,185 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
+	Box,
+	Button,
+	Card,
+	IconButton,
 	Table,
 	TableBody,
 	TableCell,
 	TableContainer,
 	TableHead,
 	TableRow,
-	Paper,
-	IconButton,
-	Button,
-	Collapse,
-	Box,
+	TextField,
 	Typography,
+	Chip,
+	Alert,
+	CircularProgress,
 } from "@mui/material";
-import { ChevronDown, ChevronRight, Edit, Trash2, UserPlus } from "lucide-react";
-import { TeamMemberList } from "./TeamMemberList";
+import { Edit, Trash2, UserPlus, Filter, Search } from "lucide-react";
+import { TeamDialog } from "./TeamDialog";
+import { TeamMemberDialog } from "./TeamMemberDialog";
+import { useTeamStore } from "../../stores/teamStore";
+import { useUserCompanyStore } from "../../stores/userCompanyStore";
 
-export function TeamList({ teams = [], onEditTeam, onDeleteTeam, onAddMember, onRemoveMember }) {
-	const [expandedTeams, setExpandedTeams] = useState({});
+export function TeamList() {
+	const [searchTerm, setSearchTerm] = useState("");
+	const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+	const [memberDialogOpen, setMemberDialogOpen] = useState(false);
+	const [selectedTeam, setSelectedTeam] = useState(null);
 
-	const toggleTeamExpanded = (teamId) => {
-		setExpandedTeams((prev) => ({
-			...prev,
-			[teamId]: !prev[teamId],
-		}));
+	const { teams, removeTeam, loading, error, fetchTeams } = useTeamStore();
+	const { getActiveCompany } = useUserCompanyStore();
+	const activeCompany = getActiveCompany();
+
+	useEffect(() => {
+		if (activeCompany?.id) {
+			fetchTeams(activeCompany.id);
+		}
+	}, [activeCompany?.id, fetchTeams]);
+
+	const filteredTeams =
+		teams?.filter(
+			(team) =>
+				team?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+				team?.description?.toLowerCase().includes(searchTerm.toLowerCase())
+		) || [];
+
+	const handleEditTeam = (team) => {
+		setSelectedTeam(team);
+		setTeamDialogOpen(true);
 	};
 
-	if (!teams || teams.length === 0) {
+	const handleAddMembers = (team) => {
+		setSelectedTeam(team);
+		setMemberDialogOpen(true);
+	};
+
+	const handleDeleteTeam = async (teamId) => {
+		if (window.confirm("Are you sure you want to delete this team?")) {
+			try {
+				await removeTeam(teamId);
+			} catch (err) {
+				console.error("Error deleting team:", err);
+			}
+		}
+	};
+
+	if (!activeCompany) {
 		return (
-			<TableContainer component={Paper}>
-				<Table>
-					<TableHead>
-						<TableRow>
-							<TableCell width='40px'></TableCell>
-							<TableCell>Name</TableCell>
-							<TableCell>Description</TableCell>
-							<TableCell>Members</TableCell>
-							<TableCell align='right'>Actions</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody>
-						<TableRow>
-							<TableCell colSpan={5} align='center'>
-								<Typography variant='body2' color='text.secondary'>
-									No teams found
-								</Typography>
-							</TableCell>
-						</TableRow>
-					</TableBody>
-				</Table>
-			</TableContainer>
+			<Alert severity='warning' sx={{ mt: 2 }}>
+				Please select a company to manage teams
+			</Alert>
+		);
+	}
+
+	if (loading) {
+		return (
+			<Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+				<CircularProgress />
+			</Box>
 		);
 	}
 
 	return (
-		<TableContainer component={Paper}>
-			<Table>
-				<TableHead>
-					<TableRow>
-						<TableCell width='40px'></TableCell>
-						<TableCell>Name</TableCell>
-						<TableCell>Description</TableCell>
-						<TableCell>Members</TableCell>
-						<TableCell align='right'>Actions</TableCell>
-					</TableRow>
-				</TableHead>
-				<TableBody>
-					{teams.map((team) => (
-						<React.Fragment key={team.id}>
-							<TableRow hover>
-								<TableCell>
-									<IconButton size='small' onClick={() => toggleTeamExpanded(team.id)}>
-										{expandedTeams[team.id] ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-									</IconButton>
-								</TableCell>
-								<TableCell>{team.name}</TableCell>
-								<TableCell>{team.description || "-"}</TableCell>
-								<TableCell>{team.members?.length || 0}</TableCell>
-								<TableCell align='right'>
-									<Button
-										size='small'
-										startIcon={<UserPlus size={16} />}
-										onClick={() => onAddMember(team)}
-										sx={{ mr: 1 }}
-									>
-										Add Member
-									</Button>
-									<IconButton onClick={() => onEditTeam(team)} size='small' title='Edit Team'>
-										<Edit size={18} />
-									</IconButton>
-									<IconButton
-										onClick={() => onDeleteTeam(team.id)}
-										size='small'
-										color='error'
-										title='Remove Team'
-									>
-										<Trash2 size={18} />
-									</IconButton>
-								</TableCell>
-							</TableRow>
+		<Box>
+			{error && (
+				<Alert severity='error' sx={{ mb: 3 }}>
+					{error}
+				</Alert>
+			)}
+
+			<Typography variant='h4' sx={{ mb: 4, fontWeight: "bold" }}>
+				Team Management
+			</Typography>
+
+			<Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+				<Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+					<TextField
+						size='small'
+						placeholder='Search teams...'
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						InputProps={{
+							startAdornment: <Search size={20} />,
+						}}
+					/>
+					<IconButton>
+						<Filter size={20} />
+					</IconButton>
+				</Box>
+				<Button variant='contained' onClick={() => setTeamDialogOpen(true)}>
+					Create Team
+				</Button>
+			</Box>
+
+			<TableContainer component={Card}>
+				<Table>
+					<TableHead>
+						<TableRow>
+							<TableCell>Team Name</TableCell>
+							<TableCell>Description</TableCell>
+							<TableCell>Members</TableCell>
+							<TableCell>Created</TableCell>
+							<TableCell align='right'>Actions</TableCell>
+						</TableRow>
+					</TableHead>
+					<TableBody>
+						{filteredTeams.length > 0 ? (
+							filteredTeams.map((team) => (
+								<TableRow key={team.id}>
+									<TableCell>{team.name}</TableCell>
+									<TableCell>{team.description || "-"}</TableCell>
+									<TableCell>
+										<Chip label={`${team.members?.length || 0} members`} size='small' />
+									</TableCell>
+									<TableCell>{team.createdAt ? new Date(team.createdAt).toLocaleDateString() : "-"}</TableCell>
+									<TableCell align='right'>
+										<IconButton onClick={() => handleAddMembers(team)} size='small' title='Add Members'>
+											<UserPlus size={18} />
+										</IconButton>
+										<IconButton onClick={() => handleEditTeam(team)} size='small' title='Edit Team'>
+											<Edit size={18} />
+										</IconButton>
+										<IconButton
+											onClick={() => handleDeleteTeam(team.id)}
+											size='small'
+											color='error'
+											title='Delete Team'
+										>
+											<Trash2 size={18} />
+										</IconButton>
+									</TableCell>
+								</TableRow>
+							))
+						) : (
 							<TableRow>
-								<TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={5}>
-									<Collapse in={expandedTeams[team.id]} timeout='auto' unmountOnExit>
-										<Box sx={{ margin: 1 }}>
-											<Typography variant='h6' gutterBottom component='div'>
-												Team Members
-											</Typography>
-											<Table size='small'>
-												<TableHead>
-													<TableRow>
-														<TableCell>Name</TableCell>
-														<TableCell>Role</TableCell>
-														<TableCell>Email</TableCell>
-														<TableCell>Phone</TableCell>
-														<TableCell align='right'>Actions</TableCell>
-													</TableRow>
-												</TableHead>
-												<TableBody>
-													<TeamMemberList
-														members={team.members}
-														onRemoveMember={(memberId) => onRemoveMember(team.id, memberId)}
-													/>
-												</TableBody>
-											</Table>
-										</Box>
-									</Collapse>
+								<TableCell colSpan={5} align='center'>
+									No teams found
 								</TableCell>
 							</TableRow>
-						</React.Fragment>
-					))}
-				</TableBody>
-			</Table>
-		</TableContainer>
+						)}
+					</TableBody>
+				</Table>
+			</TableContainer>
+
+			<TeamDialog
+				open={teamDialogOpen}
+				onClose={() => {
+					setTeamDialogOpen(false);
+					setSelectedTeam(null);
+				}}
+				team={selectedTeam}
+			/>
+
+			<TeamMemberDialog
+				open={memberDialogOpen}
+				onClose={() => {
+					setMemberDialogOpen(false);
+					setSelectedTeam(null);
+				}}
+				team={selectedTeam}
+			/>
+		</Box>
 	);
 }

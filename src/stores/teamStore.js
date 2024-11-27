@@ -1,99 +1,198 @@
 import { create } from "zustand";
 import { generateClient } from "aws-amplify/data";
-import { teamQueries } from "../utils/team/teamQueries";
-import { teamMutations } from "../utils/team/teamMutations";
 
-const client = generateClient({
-	authMode: "userPool",
-});
+const client = generateClient();
+
+// Schema Documentation
+/**
+ * Team Schema:
+ * - id: string (required)
+ * - name: string (required)
+ * - description: string (optional)
+ * - companyId: string (required)
+ * - members: TeamMember[] (optional)
+ * - createdAt: string (auto-generated)
+ * - updatedAt: string (auto-generated)
+ */
 
 export const useTeamStore = create((set, get) => ({
 	teams: [],
 	loading: false,
 	error: null,
-	subscription: null,
 
 	fetchTeams: async (companyId) => {
-		console.log("TeamStore: Starting fetchTeams for companyId:", companyId);
 		if (!companyId) {
-			console.error("TeamStore: No companyId provided");
+			console.error("TeamStore: fetchTeams called without companyId");
 			set({ error: "Company ID is required", loading: false });
 			return;
 		}
 
 		set({ loading: true });
 		try {
-			console.log("TeamStore: Setting up subscription");
-			const subscription = teamQueries.observeTeams(client, companyId).subscribe({
-				next: ({ items }) => {
-					console.log("TeamStore: Received teams update:", items);
-					set({
-						teams: items,
-						loading: false,
-						error: null,
-					});
-				},
-				error: (err) => {
-					console.error("TeamStore: Subscription error:", err);
-					set({ error: "Failed to fetch teams", loading: false });
+			const response = await client.models.Team.list({
+				filter: { companyId: { eq: companyId } },
+				include: {
+					members: {
+						include: {
+							members: true,
+						},
+					},
 				},
 			});
-			console.log("TeamStore: Subscription set up successfully");
-			set({ subscription });
+			console.log("TeamStore: Successfully fetched teams:", response.data);
+			if (!response?.data) {
+				throw new Error("Failed to fetch teams");
+			}
+
+			console.log("TeamStore: Successfully fetched teams:", response.data);
+			set({
+				teams: response.data,
+				loading: false,
+				error: null,
+			});
 		} catch (err) {
-			console.error("TeamStore: Error in fetchTeams:", err);
-			set({ error: "Failed to fetch teams", loading: false });
+			console.error("TeamStore: Error fetching teams:", err);
+			set({
+				error: err.message || "Failed to fetch teams",
+				loading: false,
+			});
 		}
 	},
 
 	addTeam: async (teamData) => {
-		console.log("TeamStore: Adding team:", teamData);
+		// Validate required fields
+		if (!teamData.companyId) {
+			console.error("TeamStore: addTeam called without companyId");
+			throw new Error("Company ID is required");
+		}
+
+		if (!teamData.name?.trim()) {
+			console.error("TeamStore: addTeam called without name");
+			throw new Error("Team name is required");
+		}
+
+		// Validate against old schema format
+		if ("role" in teamData || "contactId" in teamData) {
+			console.error("TeamStore: Detected deprecated schema fields in team data", teamData);
+			throw new Error("Invalid team data format: Contains deprecated fields");
+		}
+
 		set({ loading: true });
 		try {
-			const response = await teamMutations.createTeam(client, teamData);
-			console.log("TeamStore: Team added successfully:", response);
-			return response;
+			const response = await client.models.Team.create({
+				name: teamData.name.trim(),
+				description: teamData.description?.trim() || null,
+				companyId: teamData.companyId,
+			});
+			console.log("TeamStore: Successfully created team:", response);
+			if (!response?.data) {
+				throw new Error("Failed to create team");
+			}
+
+			console.log("TeamStore: Successfully created team:", response.data);
+			set((state) => ({
+				teams: [...state.teams, response.data],
+				loading: false,
+				error: null,
+			}));
+
+			return response.data;
 		} catch (err) {
-			console.error("TeamStore: Error adding team:", err);
-			set({ error: "Failed to add team", loading: false });
+			console.error("TeamStore: Error creating team:", err);
+			set({
+				error: err.message || "Failed to create team",
+				loading: false,
+			});
 			throw err;
 		}
 	},
 
-	updateTeam: async (id, updates) => {
-		console.log("TeamStore: Updating team:", { id, updates });
+	updateTeam: async (id, teamData) => {
+		if (!id) {
+			console.error("TeamStore: updateTeam called without id");
+			throw new Error("Team ID is required");
+		}
+
+		// Validate against old schema format
+		if ("role" in teamData || "contactId" in teamData) {
+			console.error("TeamStore: Detected deprecated schema fields in update data", teamData);
+			throw new Error("Invalid team data format: Contains deprecated fields");
+		}
+
 		set({ loading: true });
 		try {
-			const response = await teamMutations.updateTeam(client, id, updates);
-			console.log("TeamStore: Team updated successfully:", response);
-			return response;
+			const response = await client.models.Team.update({
+				id,
+				name: teamData.name?.trim(),
+				description: teamData.description?.trim() || null,
+			});
+
+			if (!response?.data) {
+				throw new Error("Failed to update team");
+			}
+
+			console.log("TeamStore: Successfully updated team:", response.data);
+			set((state) => ({
+				teams: state.teams.map((team) => (team.id === id ? response.data : team)),
+				loading: false,
+				error: null,
+			}));
+
+			return response.data;
 		} catch (err) {
 			console.error("TeamStore: Error updating team:", err);
-			set({ error: "Failed to update team", loading: false });
+			set({
+				error: err.message || "Failed to update team",
+				loading: false,
+			});
 			throw err;
 		}
 	},
 
-	removeTeam: async (teamId) => {
-		console.log("TeamStore: Removing team:", teamId);
+	removeTeam: async (id) => {
+		if (!id) {
+			console.error("TeamStore: removeTeam called without id");
+			throw new Error("Team ID is required");
+		}
+
 		set({ loading: true });
 		try {
-			await teamMutations.deleteTeam(client, teamId);
+			// First remove all team members
+			const teamMembers = await client.models.TeamMember.list({
+				filter: { teamId: { eq: id } },
+			});
+
+			if (teamMembers?.data) {
+				for (const member of teamMembers.data) {
+					await client.models.TeamMember.delete({ id: member.id });
+				}
+			}
+
+			// Then remove the team
+			await client.models.Team.delete({ id });
+
+			console.log("TeamStore: Successfully removed team and its members");
 			set((state) => ({
-				teams: state.teams.filter((team) => team.id !== teamId),
+				teams: state.teams.filter((team) => team.id !== id),
 				loading: false,
+				error: null,
 			}));
 		} catch (err) {
 			console.error("TeamStore: Error removing team:", err);
-			set({ error: "Failed to remove team", loading: false });
+			set({
+				error: err.message || "Failed to delete team",
+				loading: false,
+			});
+			throw err;
 		}
 	},
 
-	cleanup: () => {
-		const { subscription } = get();
-		if (subscription) {
-			subscription.unsubscribe();
-			set({ subscription: null });
-		}
+	clearStore: () => {
+		console.log("TeamStore: Clearing store state");
+		set({
+			teams: [],
+			loading: false,
+			error: null,
+		});
 	},
 }));

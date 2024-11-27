@@ -8,20 +8,9 @@ export function CompanySwitcher() {
 	const { userCompanies, activeCompanyId, setActiveCompany, fetchUserCompanies, loading } = useUserCompanyStore();
 	const { user } = useAuthStore();
 
-	// Debug logging
-	useEffect(() => {
-		console.log("CompanySwitcher: Current state:", {
-			userCompanies,
-			activeCompanyId,
-			loading,
-			userId: user?.id,
-		});
-	}, [userCompanies, activeCompanyId, loading, user?.id]);
-
 	// Fetch companies when component mounts or user changes
 	useEffect(() => {
 		if (user?.id) {
-			console.log("CompanySwitcher: Fetching companies for user:", user.id);
 			fetchUserCompanies();
 		}
 	}, [user?.id, fetchUserCompanies]);
@@ -29,14 +18,12 @@ export function CompanySwitcher() {
 	// Set initial active company if none is selected
 	useEffect(() => {
 		if (userCompanies.length > 0 && !activeCompanyId) {
-			console.log("CompanySwitcher: Setting initial active company:", userCompanies[0].id);
 			setActiveCompany(userCompanies[0].id);
 		}
 	}, [userCompanies, activeCompanyId, setActiveCompany]);
 
 	const handleCompanyChange = (event) => {
 		const newCompanyId = event.target.value;
-		console.log("CompanySwitcher: Company selection changed to:", newCompanyId);
 		setActiveCompany(newCompanyId);
 	};
 
@@ -49,7 +36,6 @@ export function CompanySwitcher() {
 	}
 
 	if (!userCompanies?.length) {
-		console.log("CompanySwitcher: No companies available");
 		return null;
 	}
 
@@ -84,7 +70,6 @@ export function CompanySwitcher() {
 					displayEmpty
 					renderValue={(selected) => {
 						const company = userCompanies.find((c) => c.id === selected);
-						console.log("CompanySwitcher: Rendering value for company:", company);
 						return renderCompanyDisplay(company || userCompanies[0]);
 					}}
 					sx={{

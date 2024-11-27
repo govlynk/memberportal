@@ -6,159 +6,80 @@ import {
 	DialogActions,
 	Button,
 	Box,
+	List,
+	ListItem,
+	ListItemText,
+	ListItemSecondaryAction,
+	IconButton,
+	TextField,
 	FormControl,
 	InputLabel,
 	Select,
 	MenuItem,
-	Alert,
+	Chip,
+	Typography,
 } from "@mui/material";
+import { UserPlus } from "lucide-react";
 import { useTeamStore } from "../../stores/teamStore";
-import { generateClient } from "aws-amplify/data";
+import { useContactStore } from "../../stores/contactStore";
 
-const client = generateClient({
-	authMode: "userPool",
-});
+const ROLES = ["Team Lead", "Developer", "Designer", "Product Manager", "QA Engineer", "Business Analyst", "Other"];
 
-const ROLES = [
-	"Executive",
-	"Sales",
-	"Marketing",
-	"Finance",
-	"Risk",
-	"Technology",
-	"Engineering",
-	"Operations",
-	"HumanResources",
-	"Legal",
-	"Contracting",
-	"Servicing",
-	"Other",
-];
-
-const initialFormState = {
-	contactId: "",
-	role: "",
-};
-
-export function TeamMemberDialog({ open, onClose, team, companyId }) {
-	const { addTeamMember } = useTeamStore();
-	const [formData, setFormData] = useState(initialFormState);
-	const [contacts, setContacts] = useState([]);
-	const [error, setError] = useState(null);
-	const [loading, setLoading] = useState(false);
+export function TeamMemberDialog({ open, onClose, team }) {
+	const [searchTerm, setSearchTerm] = useState("");
+	const [selectedRole, setSelectedRole] = useState("");
+	const [selectedContacts, setSelectedContacts] = useState([]);
+	const { contacts, fetchContacts } = useContactStore();
+	const { updateTeam } = useTeamStore();
 
 	useEffect(() => {
-		if (open && companyId) {
+		if (open) {
 			fetchContacts();
 		}
-	}, [open, companyId]);
+	}, [open, fetchContacts]);
 
-	const fetchContacts = async () => {
-		setLoading(true);
+	const filteredContacts = contacts.filter((contact) => {
+		const isAlreadyMember = team?.members?.some((member) => member.contactId === contact.id);
+		const matchesSearch =
+			contact.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			contact.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			contact.email?.toLowerCase().includes(searchTerm.toLowerCase());
+		return !isAlreadyMember && matchesSearch;
+	});
+
+	const handleAddMembers = async () => {
 		try {
-			const response = await client.models.Contact.list({
-				filter: { companyId: { eq: companyId } },
-			});
+			const newMembers = selectedContacts.map((contact) => ({
+				contactId: contact.id,
+				role: selectedRole,
+				status: "ACTIVE",
+				joinedAt: new Date().toISOString(),
+			}));
 
-			if (!response?.data) {
-				throw new Error("Failed to fetch contacts");
-			}
-
-			// Filter out contacts that are already team members
-			const existingContactIds = team?.members?.map((member) => member.contactId) || [];
-			const availableContacts = response.data.filter((contact) => !existingContactIds.includes(contact.id));
-
-			setContacts(availableContacts);
-			setError(null);
-		} catch (err) {
-			console.error("Error fetching contacts:", err);
-			setError("Failed to load contacts");
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleChange = (e) => {
-		const { name, value } = e.target;
-		setFormData((prev) => ({
-			...prev,
-			[name]: value,
-		}));
-		setError(null);
-	};
-
-	const validateForm = () => {
-		if (!formData.contactId) {
-			setError("Please select a contact");
-			return false;
-		}
-		if (!formData.role) {
-			setError("Please select a role");
-			return false;
-		}
-		if (!team?.id) {
-			setError("No team selected");
-			return false;
-		}
-		return true;
-	};
-
-	const handleSubmit = async () => {
-		if (!validateForm()) return;
-
-		setLoading(true);
-		try {
-			await addTeamMember({
-				teamId: team.id,
-				contactId: formData.contactId,
-				role: formData.role,
-			});
-
+			const updatedMembers = [...(team.members || []), ...newMembers];
+			await updateTeam(team.id, { members: updatedMembers });
 			onClose();
-		} catch (err) {
-			console.error("Error adding team member:", err);
-			setError(err.message || "Failed to add team member");
-		} finally {
-			setLoading(false);
+		} catch (error) {
+			console.error("Failed to add team members:", error);
 		}
+	};
+
+	const handleSelectContact = (contact) => {
+		setSelectedContacts((prev) => [...prev, contact]);
+	};
+
+	const handleRemoveContact = (contactId) => {
+		setSelectedContacts((prev) => prev.filter((c) => c.id !== contactId));
 	};
 
 	return (
-		<Dialog
-			open={open}
-			onClose={onClose}
-			maxWidth='sm'
-			fullWidth
-			PaperProps={{
-				sx: {
-					bgcolor: "background.paper",
-					color: "text.primary",
-				},
-			}}
-		>
-			<DialogTitle>Add Team Member</DialogTitle>
+		<Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
+			<DialogTitle>Add Team Members</DialogTitle>
 			<DialogContent>
-				<Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-					{error && (
-						<Alert severity='error' sx={{ mb: 2 }}>
-							{error}
-						</Alert>
-					)}
-
-					<FormControl fullWidth required disabled={loading}>
-						<InputLabel>Contact</InputLabel>
-						<Select name='contactId' value={formData.contactId} onChange={handleChange} label='Contact'>
-							{contacts.map((contact) => (
-								<MenuItem key={contact.id} value={contact.id}>
-									{contact.firstName} {contact.lastName}
-								</MenuItem>
-							))}
-						</Select>
-					</FormControl>
-
-					<FormControl fullWidth required disabled={loading}>
+				<Box sx={{ mb: 3 }}>
+					<FormControl fullWidth sx={{ mb: 2 }}>
 						<InputLabel>Role</InputLabel>
-						<Select name='role' value={formData.role} onChange={handleChange} label='Role'>
+						<Select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} label='Role'>
 							{ROLES.map((role) => (
 								<MenuItem key={role} value={role}>
 									{role}
@@ -166,14 +87,54 @@ export function TeamMemberDialog({ open, onClose, team, companyId }) {
 							))}
 						</Select>
 					</FormControl>
+
+					<TextField
+						fullWidth
+						label='Search Contacts'
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						sx={{ mb: 2 }}
+					/>
+
+					{selectedContacts.length > 0 && (
+						<Box sx={{ mb: 2 }}>
+							<Typography variant='subtitle2' sx={{ mb: 1 }}>
+								Selected Contacts:
+							</Typography>
+							<Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+								{selectedContacts.map((contact) => (
+									<Chip
+										key={contact.id}
+										label={`${contact.firstName} ${contact.lastName}`}
+										onDelete={() => handleRemoveContact(contact.id)}
+									/>
+								))}
+							</Box>
+						</Box>
+					)}
+
+					<List>
+						{filteredContacts.map((contact) => (
+							<ListItem key={contact.id}>
+								<ListItemText primary={`${contact.firstName} ${contact.lastName}`} secondary={contact.email} />
+								<ListItemSecondaryAction>
+									<IconButton edge='end' onClick={() => handleSelectContact(contact)}>
+										<UserPlus size={18} />
+									</IconButton>
+								</ListItemSecondaryAction>
+							</ListItem>
+						))}
+					</List>
 				</Box>
 			</DialogContent>
 			<DialogActions>
-				<Button onClick={onClose} disabled={loading}>
-					Cancel
-				</Button>
-				<Button onClick={handleSubmit} variant='contained' disabled={loading}>
-					{loading ? "Adding..." : "Add Member"}
+				<Button onClick={onClose}>Cancel</Button>
+				<Button
+					variant='contained'
+					onClick={handleAddMembers}
+					disabled={!selectedRole || selectedContacts.length === 0}
+				>
+					Add Members
 				</Button>
 			</DialogActions>
 		</Dialog>

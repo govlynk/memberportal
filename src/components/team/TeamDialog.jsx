@@ -1,63 +1,64 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box, Alert } from "@mui/material";
+import {
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	TextField,
+	Button,
+	Box,
+	Alert,
+	CircularProgress,
+} from "@mui/material";
 import { useTeamStore } from "../../stores/teamStore";
+import { useUserCompanyStore } from "../../stores/userCompanyStore";
 
-const initialFormState = {
-	name: "",
-	description: "",
-};
-
-export function TeamDialog({ open, onClose, editTeam = null, companyId }) {
+export function TeamDialog({ open, onClose, team }) {
 	const { addTeam, updateTeam } = useTeamStore();
-	const [formData, setFormData] = useState(initialFormState);
-	const [error, setError] = useState(null);
+	const { getActiveCompany } = useUserCompanyStore();
 	const [loading, setLoading] = useState(false);
+	const [formData, setFormData] = useState({
+		name: "",
+		description: "",
+	});
+	const [error, setError] = useState(null);
 
 	useEffect(() => {
-		if (editTeam) {
+		if (team) {
 			setFormData({
-				name: editTeam.name,
-				description: editTeam.description || "",
+				name: team.name || "",
+				description: team.description || "",
 			});
 		} else {
-			setFormData(initialFormState);
+			setFormData({
+				name: "",
+				description: "",
+			});
 		}
-	}, [editTeam]);
+	}, [team]);
 
-	const handleChange = (e) => {
-		const { name, value } = e.target;
-		setFormData((prev) => ({
-			...prev,
-			[name]: value,
-		}));
+	const handleSubmit = async (e) => {
+		e.preventDefault();
 		setError(null);
-	};
-
-	const validateForm = () => {
-		if (!formData.name.trim()) {
-			setError("Team name is required");
-			return false;
-		}
-		if (!companyId) {
-			setError("No company selected");
-			return false;
-		}
-		return true;
-	};
-
-	const handleSubmit = async () => {
-		if (!validateForm()) return;
-
 		setLoading(true);
+
 		try {
+			if (!formData.name.trim()) {
+				throw new Error("Team name is required");
+			}
+
+			const activeCompany = getActiveCompany();
+			if (!activeCompany?.id) {
+				throw new Error("No active company selected");
+			}
+
 			const teamData = {
-				name: formData.name.trim(),
-				description: formData.description?.trim() || null,
-				companyId,
+				...formData,
+				companyId: activeCompany.id,
 			};
 
-			if (editTeam) {
-				await updateTeam(editTeam.id, teamData);
+			if (team) {
+				await updateTeam(team.id, teamData);
 			} else {
 				await addTeam(teamData);
 			}
@@ -71,56 +72,53 @@ export function TeamDialog({ open, onClose, editTeam = null, companyId }) {
 	};
 
 	return (
-		<Dialog
-			open={open}
-			onClose={onClose}
-			maxWidth='sm'
-			fullWidth
-			PaperProps={{
-				sx: {
-					bgcolor: "background.paper",
-					color: "text.primary",
-				},
-			}}
-		>
-			<DialogTitle>{editTeam ? "Edit Team" : "Add New Team"}</DialogTitle>
-			<DialogContent>
-				<Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-					{error && (
-						<Alert severity='error' sx={{ mb: 2 }}>
-							{error}
-						</Alert>
-					)}
-					<TextField
-						fullWidth
-						label='Team Name'
-						name='name'
-						value={formData.name}
-						onChange={handleChange}
-						required
-						error={error === "Team name is required"}
-						disabled={loading}
-					/>
-					<TextField
-						fullWidth
-						label='Description'
-						name='description'
-						value={formData.description}
-						onChange={handleChange}
-						multiline
-						rows={3}
-						disabled={loading}
-					/>
-				</Box>
-			</DialogContent>
-			<DialogActions>
-				<Button onClick={onClose} disabled={loading}>
-					Cancel
-				</Button>
-				<Button onClick={handleSubmit} variant='contained' disabled={loading}>
-					{loading ? "Saving..." : editTeam ? "Save Changes" : "Add Team"}
-				</Button>
-			</DialogActions>
+		<Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
+			<form onSubmit={handleSubmit}>
+				<DialogTitle>{team ? "Edit Team" : "Create New Team"}</DialogTitle>
+				<DialogContent>
+					<Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+						{error && (
+							<Alert severity='error' sx={{ mb: 2 }}>
+								{error}
+							</Alert>
+						)}
+						<TextField
+							label='Team Name'
+							value={formData.name}
+							onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+							required
+							disabled={loading}
+							error={!!error && !formData.name.trim()}
+							helperText={error && !formData.name.trim() ? "Team name is required" : ""}
+						/>
+						<TextField
+							label='Description'
+							value={formData.description}
+							onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+							multiline
+							rows={3}
+							disabled={loading}
+						/>
+					</Box>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={onClose} disabled={loading}>
+						Cancel
+					</Button>
+					<Button type='submit' variant='contained' disabled={loading}>
+						{loading ? (
+							<>
+								<CircularProgress size={20} sx={{ mr: 1 }} />
+								Saving...
+							</>
+						) : team ? (
+							"Save Changes"
+						) : (
+							"Create Team"
+						)}
+					</Button>
+				</DialogActions>
+			</form>
 		</Dialog>
 	);
 }

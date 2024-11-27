@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Box, Stepper, Step, StepLabel, Card, Typography, useTheme } from "@mui/material";
 import { CompanySearch } from "../components/clientSetup/CompanySearch";
 import { AdminSetup } from "../components/clientSetup/AdminSetup";
+import { TeamSetupScreen } from "../components/clientSetup/TeamSetupScreen";
 import { SetupReview } from "../components/clientSetup/SetupReview";
 
-const steps = ["Company Information", "Admin Setup", "Review & Confirm"];
+const steps = ["Company Information", "Admin Setup", "Team Setup", "Review & Confirm"];
 
 export default function ClientSetupScreen() {
 	const theme = useTheme();
@@ -17,13 +18,17 @@ export default function ClientSetupScreen() {
 
 	const handleCompanySelect = (companyData) => {
 		setSetupData((prev) => ({ ...prev, company: companyData }));
-		console.log("companyData", companyData);
 		setActiveStep(1);
 	};
 
 	const handleAdminSetup = (adminData) => {
 		setSetupData((prev) => ({ ...prev, user: adminData }));
 		setActiveStep(2);
+	};
+
+	const handleTeamSetup = (teamData) => {
+		setSetupData((prev) => ({ ...prev, team: teamData }));
+		setActiveStep(3);
 	};
 
 	const handleBack = () => {
@@ -37,6 +42,8 @@ export default function ClientSetupScreen() {
 			case 1:
 				return <AdminSetup onSubmit={handleAdminSetup} onBack={handleBack} companyData={setupData.company} />;
 			case 2:
+				return <TeamSetupScreen onSubmit={handleTeamSetup} onBack={handleBack} setupData={setupData} />;
+			case 3:
 				return <SetupReview setupData={setupData} onBack={handleBack} />;
 			default:
 				return null;
