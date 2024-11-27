@@ -274,18 +274,18 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 						</Grid>
 					</Grid>
 				</Grid>
-
-				<Divider sx={{ my: 4 }} />
-
-				<Box sx={{ display: "flex", justifyContent: "space-between" }}>
-					<Button onClick={onBack} startIcon={<ArrowLeft />}>
-						Back
-					</Button>
-					<Button variant='contained' onClick={handleSubmit} endIcon={<ArrowRight />}>
-						Continue
-					</Button>
-				</Box>
 			</Grid>
+
+			<Divider sx={{ my: 4 }} />
+
+			<Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
+				<Button onClick={onBack} startIcon={<ArrowLeft />}>
+					Back
+				</Button>
+				<Button variant='contained' onClick={handleSubmit} endIcon={<ArrowRight />}>
+					Continue
+				</Button>
+			</Box>
 		</Box>
 	);
 }

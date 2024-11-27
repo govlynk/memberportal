@@ -17,17 +17,29 @@ export default function ClientSetupScreen() {
 	});
 
 	const handleCompanySelect = (companyData) => {
-		setSetupData((prev) => ({ ...prev, company: companyData }));
+		console.log("Selected company data:", companyData);
+		setSetupData((prev) => ({
+			...prev,
+			company: companyData,
+		}));
 		setActiveStep(1);
 	};
 
 	const handleAdminSetup = (adminData) => {
-		setSetupData((prev) => ({ ...prev, user: adminData }));
+		console.log("Admin setup data:", adminData);
+		setSetupData((prev) => ({
+			...prev,
+			user: adminData,
+		}));
 		setActiveStep(2);
 	};
 
 	const handleTeamSetup = (teamData) => {
-		setSetupData((prev) => ({ ...prev, team: teamData }));
+		console.log("Team setup data:", teamData);
+		setSetupData((prev) => ({
+			...prev,
+			team: teamData,
+		}));
 		setActiveStep(3);
 	};
 

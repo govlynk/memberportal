@@ -1,10 +1,23 @@
 import React, { useState } from "react";
-import { Box, TextField, Button, Typography, Alert, CircularProgress, Card, Divider, Chip } from "@mui/material";
+import {
+	Box,
+	Button,
+	TextField,
+	Typography,
+	Alert,
+	CircularProgress,
+	Card,
+	Divider,
+	Chip,
+	Stack,
+	useTheme,
+} from "@mui/material";
 import { ArrowLeft, ArrowRight, Users } from "lucide-react";
 import { useTeamStore } from "../../stores/teamStore";
 import { useTeamMemberStore } from "../../stores/teamMemberStore";
 
 export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
+	const theme = useTheme();
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [formData, setFormData] = useState({
@@ -16,6 +29,8 @@ export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
 	const { addTeamMember } = useTeamMemberStore();
 
 	const handleSubmit = async () => {
+		console.log("setupData:", setupData);
+
 		if (!formData.name.trim()) {
 			setError("Team name is required");
 			return;
@@ -58,7 +73,7 @@ export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
 			const teamMember = await addTeamMember({
 				teamId: team.id,
 				contactId: setupData.user.id,
-				role: setupData.user.role,
+				role: setupData.user.roleId,
 			});
 
 			console.log("Team member added successfully:", teamMember);
@@ -92,8 +107,8 @@ export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
 				</Box>
 
 				<Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
-					Create a default team for your organization. This team will include the primary contact and can be
-					modified later.
+					Create a default team for your organization. This team will include you as the initial team member with
+					your assigned role.
 				</Typography>
 
 				{error && (
@@ -127,20 +142,40 @@ export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
 
 				<Divider sx={{ my: 3 }} />
 
-				<Box sx={{ mb: 3 }}>
+				<Box>
 					<Typography variant='subtitle2' gutterBottom>
 						Initial Team Member
 					</Typography>
-					<Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-						<Typography>
-							{setupData.user.firstName} {setupData.user.lastName}
-						</Typography>
-						<Chip label={setupData.user.role} size='small' color='primary' variant='outlined' />
-					</Box>
+					<Card variant='outlined' sx={{ p: 2, bgcolor: theme.palette.grey[50] }}>
+						<Stack spacing={2}>
+							<Box>
+								<Typography variant='caption' display='block' color='text.secondary' gutterBottom>
+									Name
+								</Typography>
+								<Typography>
+									{setupData.user.firstName} {setupData.user.lastName}
+								</Typography>
+							</Box>
+							<Box>
+								<Typography variant='caption' display='block' color='text.secondary' gutterBottom>
+									Email
+								</Typography>
+								<Typography>{setupData.user.contactEmail}</Typography>
+							</Box>
+							<Box>
+								<Typography variant='caption' display='block' color='text.secondary' gutterBottom>
+									Role
+								</Typography>
+								<Box sx={{ mt: 0.5 }}>
+									<Chip label={setupData.user.roleId} size='small' color='primary' />
+								</Box>
+							</Box>
+						</Stack>
+					</Card>
 				</Box>
 			</Card>
 
-			<Box sx={{ display: "flex", justifyContent: "space-between" }}>
+			<Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
 				<Button onClick={onBack} startIcon={<ArrowLeft />} disabled={loading}>
 					Back
 				</Button>

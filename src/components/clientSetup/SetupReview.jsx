@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, Button, Typography, Paper, Divider, Alert, CircularProgress, useTheme } from "@mui/material";
+import { Box, Paper, Typography, Alert, CircularProgress, Button, Divider, useTheme } from "@mui/material";
 import { ArrowLeft, Check } from "lucide-react";
 import { generateClient } from "aws-amplify/data";
 import { useCompanyStore } from "../../stores/companyStore";
@@ -8,9 +8,7 @@ import { useTeamStore } from "../../stores/teamStore";
 import { useUserCompanyRoleStore } from "../../stores/userCompanyRoleStore";
 import { useAuthStore } from "../../stores/authStore";
 
-const client = generateClient({
-	authMode: "userPool",
-});
+const client = generateClient();
 
 export function SetupReview({ setupData, onBack }) {
 	const theme = useTheme();
@@ -23,15 +21,19 @@ export function SetupReview({ setupData, onBack }) {
 	const { addTeam } = useTeamStore();
 	const { addUserCompanyRole } = useUserCompanyRoleStore();
 	const { user } = useAuthStore();
-
+	console.log("Starting setup process with data:", setupData);
 	const handleSetup = async () => {
 		setLoading(true);
 		setError(null);
-		console.log("Starting setup process");
+		console.log("Starting setup process with data:", setupData);
 
 		try {
 			if (!user?.sub) {
 				throw new Error("User not authenticated");
+			}
+			console.log("Review Company data:", setupData.company);
+			if (!setupData?.company) {
+				throw new Error("Company information is missing");
 			}
 
 			// 1. Create company with all available fields from SAM.gov data
@@ -70,8 +72,12 @@ export function SetupReview({ setupData, onBack }) {
 				billingAddressCountryCode: setupData.company.billingAddressCountryCode || null,
 
 				// Business Information
-				companyStartDate: new Date(setupData.company.companyStartDate).toISOString() || null,
-				entityStartDate: new Date(setupData.company.entityStartDate).toISOString() || null,
+				companyStartDate: setupData.company.companyStartDate
+					? new Date(setupData.company.companyStartDate).toISOString()
+					: null,
+				entityStartDate: setupData.company.entityStartDate
+					? new Date(setupData.company.entityStartDate).toISOString()
+					: null,
 				entityDivisionName: setupData.company.entityDivisionName || null,
 				entityStructureDesc: setupData.company.entityStructureDesc || null,
 				entityTypeDesc: setupData.company.entityTypeDesc || null,
@@ -79,12 +85,20 @@ export function SetupReview({ setupData, onBack }) {
 				profitStructureDesc: setupData.company.profitStructureDesc || null,
 
 				// Registration Information
-				registrationDate: new Date(setupData.company.registrationDate).toISOString() || null,
-				registrationExpirationDate: new Date(setupData.company.registrationExpirationDate).toISOString() || null,
+				registrationDate: setupData.company.registrationDate
+					? new Date(setupData.company.registrationDate).toISOString()
+					: null,
+				registrationExpirationDate: setupData.company.registrationExpirationDate
+					? new Date(setupData.company.registrationExpirationDate).toISOString()
+					: null,
 				registrationStatus: setupData.company.registrationStatus || null,
 				purposeOfRegistrationDesc: setupData.company.purposeOfRegistrationDesc || null,
-				submissionDate: new Date(setupData.company.submissionDate).toISOString() || null,
-				lastUpdateDate: new Date(setupData.company.lastUpdateDate).toISOString() || null,
+				submissionDate: setupData.company.submissionDate
+					? new Date(setupData.company.submissionDate).toISOString()
+					: null,
+				lastUpdateDate: setupData.company.lastUpdateDate
+					? new Date(setupData.company.lastUpdateDate).toISOString()
+					: null,
 				SAMPullDate: new Date().toISOString(),
 
 				// Location Information
@@ -98,13 +112,18 @@ export function SetupReview({ setupData, onBack }) {
 				naicsCode: setupData.company.naicsCode || [],
 				pscCode: setupData.company.pscCode || [],
 				sbaBusinessTypeDesc: setupData.company.sbaBusinessTypeDesc || [],
-				// certificationEntryDate: new Date(setupData.company.certificationEntryDate).toISOString() || [],
 
 				// Additional Information
-				fiscalYearEndCloseDate: new Date(setupData.company.fiscalYearEndCloseDate).toISOString() || null,
+				fiscalYearEndCloseDate: setupData.company.fiscalYearEndCloseDate
+					? new Date(setupData.company.fiscalYearEndCloseDate).toISOString()
+					: null,
 				exclusionStatusFlag: setupData.company.exclusionStatusFlag || null,
-				expirationDate: new Date(setupData.company.expirationDate).toISOString() || null,
-				activationDate: new Date(setupData.company.activationDate).toISOString() || null,
+				expirationDate: setupData.company.expirationDate
+					? new Date(setupData.company.expirationDate).toISOString()
+					: null,
+				activationDate: setupData.company.activationDate
+					? new Date(setupData.company.activationDate).toISOString()
+					: null,
 			};
 
 			console.log("Creating company with data:", companyData);
@@ -132,7 +151,7 @@ export function SetupReview({ setupData, onBack }) {
 				workAddressZipCode: setupData.user.workAddressZipCode || null,
 				workAddressCountryCode: setupData.user.workAddressCountryCode || "USA",
 				dateLastContacted: new Date().toISOString(),
-				notes: `Initial contact created during company setup. Role: ${setupData.user.role}`,
+				notes: `Initial contact created during company setup. Role: ${setupData.user.roleId}`,
 				companyId: companyId,
 			};
 
@@ -164,20 +183,31 @@ export function SetupReview({ setupData, onBack }) {
 
 			// 4. Create team
 			const teamData = {
+				name: setupData.team.name,
+				description: setupData.team.description,
 				companyId: companyId,
-				contactId: contactId,
-				role: setupData.user.role,
 			};
 
 			console.log("Creating team with data:", teamData);
 			const teamResponse = await client.models.Team.create(teamData);
 			console.log("Team created:", teamResponse);
 
-			// 5. Create user-company role
+			// 5. Create team member
+			const teamMemberData = {
+				teamId: teamResponse.data.id,
+				contactId: contactId,
+				role: setupData.user.roleId,
+			};
+
+			console.log("Creating team member with data:", teamMemberData);
+			const teamMemberResponse = await client.models.TeamMember.create(teamMemberData);
+			console.log("Team member created:", teamMemberResponse);
+
+			// 6. Create user-company role
 			const userCompanyRoleData = {
 				userId: userId,
 				companyId: companyId,
-				roleId: setupData.user.accessLevel || "COMPANY_ADMIN",
+				roleId: setupData.user.roleId,
 				status: "ACTIVE",
 			};
 
@@ -229,7 +259,7 @@ export function SetupReview({ setupData, onBack }) {
 					<strong>Email:</strong> {setupData.user.contactEmail}
 				</Typography>
 				<Typography>
-					<strong>Role:</strong> {setupData.user.role}
+					<strong>Role:</strong> {setupData.user.roleId}
 				</Typography>
 				<Typography>
 					<strong>Phone:</strong> {setupData.user.contactMobilePhone || "-"}

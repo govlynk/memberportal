@@ -22,22 +22,39 @@ export function CompanySearch({ onCompanySelect }) {
 
 		try {
 			const entityData = await getEntity(uei.trim());
-			const formattedData = formatCompanyData(entityData);
+			if (!entityData) {
+				throw new Error("No data found for the provided UEI");
+			}
 
+			const formattedData = formatCompanyData(entityData);
 			if (!formattedData) {
-				throw new Error("No company data found for the provided UEI");
+				throw new Error("Failed to format company data");
 			}
 
 			console.log("Raw entity data:", entityData);
 			console.log("Formatted company data:", formattedData);
 			setSearchResult(formattedData);
-			console.log(formattedData);
 		} catch (err) {
 			console.error("Search error:", err);
 			setError(err.message || "Failed to fetch company information. Please verify the UEI and try again.");
 		} finally {
 			setLoading(false);
 		}
+	};
+
+	const handleContinue = () => {
+		if (!searchResult) {
+			setError("Please search for a company first");
+			return;
+		}
+
+		// Ensure all required fields are present
+		if (!searchResult.legalBusinessName || !searchResult.uei) {
+			setError("Company data is incomplete. Please try searching again.");
+			return;
+		}
+
+		onCompanySelect(searchResult);
 	};
 
 	const handleKeyPress = (e) => {
@@ -129,7 +146,11 @@ export function CompanySearch({ onCompanySelect }) {
 							<Typography variant='caption' color='text.secondary'>
 								Expiration Date
 							</Typography>
-							<Typography variant='body1'>{searchResult.registrationExpirationDate || "-"}</Typography>
+							<Typography variant='body1'>
+								{searchResult.registrationExpirationDate
+									? new Date(searchResult.registrationExpirationDate).toLocaleDateString()
+									: "-"}
+							</Typography>
 						</Box>
 						<Box sx={{ gridColumn: "1 / -1" }}>
 							<Typography variant='caption' color='text.secondary'>
@@ -151,7 +172,7 @@ export function CompanySearch({ onCompanySelect }) {
 					</Box>
 
 					<Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
-						<Button variant='contained' endIcon={<ArrowRight />} onClick={() => onCompanySelect(searchResult)}>
+						<Button variant='contained' endIcon={<ArrowRight />} onClick={handleContinue}>
 							Continue
 						</Button>
 					</Box>
