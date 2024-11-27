@@ -15,15 +15,9 @@ export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
 			setError("Team name is required");
 			return;
 		}
-
-		// Pass the collected team data to the next step
-		onSubmit({
-			...setupData,
-			team: {
-				name: formData.name.trim(),
-				description: formData.description?.trim(),
-			},
-		});
+		console.log("****Team setup data:", formData);
+		// Pass the complete setup data along with the new team data
+		onSubmit(formData);
 	};
 
 	return (
