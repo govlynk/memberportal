@@ -1,97 +1,29 @@
 import React, { useState } from "react";
-import {
-	Box,
-	Button,
-	TextField,
-	Typography,
-	Alert,
-	CircularProgress,
-	Card,
-	Divider,
-	Chip,
-	Stack,
-	useTheme,
-} from "@mui/material";
+import { Box, Button, TextField, Typography, Alert, Card, Divider, Chip, Stack, useTheme } from "@mui/material";
 import { ArrowLeft, ArrowRight, Users } from "lucide-react";
-import { useTeamStore } from "../../stores/teamStore";
-import { useTeamMemberStore } from "../../stores/teamMemberStore";
 
 export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
 	const theme = useTheme();
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState(null);
 	const [formData, setFormData] = useState({
 		name: `${setupData.company.legalBusinessName} Team`,
 		description: `Default team for ${setupData.company.legalBusinessName}`,
 	});
+	const [error, setError] = useState(null);
 
-	const { addTeam } = useTeamStore();
-	const { addTeamMember } = useTeamMemberStore();
-
-	const handleSubmit = async () => {
-		console.log("setupData:", setupData);
-
+	const handleSubmit = () => {
 		if (!formData.name.trim()) {
 			setError("Team name is required");
 			return;
 		}
 
-		if (!setupData.company?.id) {
-			setError("Company information is missing");
-			return;
-		}
-
-		if (!setupData.user?.id) {
-			setError("User information is missing");
-			return;
-		}
-
-		setLoading(true);
-		setError(null);
-
-		try {
-			console.log("Creating team with data:", {
-				name: formData.name,
-				description: formData.description,
-				companyId: setupData.company.id,
-			});
-
-			// Create the team
-			const team = await addTeam({
+		// Pass the collected team data to the next step
+		onSubmit({
+			...setupData,
+			team: {
 				name: formData.name.trim(),
 				description: formData.description?.trim(),
-				companyId: setupData.company.id,
-			});
-
-			if (!team?.id) {
-				throw new Error("Failed to create team - no team ID returned");
-			}
-
-			console.log("Team created successfully:", team);
-
-			// Add the primary contact as a team member
-			const teamMember = await addTeamMember({
-				teamId: team.id,
-				contactId: setupData.user.id,
-				role: setupData.user.roleId,
-			});
-
-			console.log("Team member added successfully:", teamMember);
-
-			// Pass the created team data to the next step
-			onSubmit({
-				...setupData,
-				team: {
-					...team,
-					members: [teamMember],
-				},
-			});
-		} catch (err) {
-			console.error("Error setting up team:", err);
-			setError(err.message || "Failed to set up team");
-		} finally {
-			setLoading(false);
-		}
+			},
+		});
 	};
 
 	return (
@@ -126,7 +58,6 @@ export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
 						required
 						error={!!error && !formData.name.trim()}
 						helperText={error && !formData.name.trim() ? "Team name is required" : ""}
-						disabled={loading}
 					/>
 
 					<TextField
@@ -136,7 +67,6 @@ export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
 						onChange={(e) => setFormData({ ...formData, description: e.target.value })}
 						multiline
 						rows={3}
-						disabled={loading}
 					/>
 				</Box>
 
@@ -176,16 +106,11 @@ export function TeamSetupScreen({ onSubmit, onBack, setupData }) {
 			</Card>
 
 			<Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
-				<Button onClick={onBack} startIcon={<ArrowLeft />} disabled={loading}>
+				<Button onClick={onBack} startIcon={<ArrowLeft />}>
 					Back
 				</Button>
-				<Button
-					variant='contained'
-					onClick={handleSubmit}
-					endIcon={loading ? <CircularProgress size={20} /> : <ArrowRight />}
-					disabled={loading}
-				>
-					{loading ? "Setting up..." : "Continue"}
+				<Button variant='contained' onClick={handleSubmit} endIcon={<ArrowRight />}>
+					Continue
 				</Button>
 			</Box>
 		</Box>
