@@ -179,6 +179,7 @@ export function TeamList() {
 					setSelectedTeam(null);
 				}}
 				team={selectedTeam}
+				activeCompanyId={activeCompany?.id} // Pass activeCompanyId to TeamMemberDialog
 			/>
 		</Box>
 	);

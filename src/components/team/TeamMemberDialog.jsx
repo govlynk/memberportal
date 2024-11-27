@@ -20,7 +20,21 @@ const client = generateClient({
 	authMode: "userPool",
 });
 
-const ROLES = ["Member", "Admin"];
+const ROLES = [
+	"Executive",
+	"Sales",
+	"Marketing",
+	"Finance",
+	"Risk",
+	"Technology",
+	"Engineering",
+	"Operations",
+	"HumanResources",
+	"Legal",
+	"Contracting",
+	"Servicing",
+	"Other",
+];
 
 export function TeamMemberDialog({ open, onClose, activeCompanyId }) {
 	const [selectedRole, setSelectedRole] = useState("");
@@ -28,7 +42,7 @@ export function TeamMemberDialog({ open, onClose, activeCompanyId }) {
 	const [contacts, setContacts] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
-
+	console.log(activeCompanyId);
 	useEffect(() => {
 		if (activeCompanyId) {
 			setLoading(true);
@@ -51,6 +65,7 @@ export function TeamMemberDialog({ open, onClose, activeCompanyId }) {
 				filter: { companyId: { eq: companyId } },
 			});
 			return response.data;
+			console.log(response.data);
 		} catch (err) {
 			console.error("Error fetching contacts:", err);
 			throw err;
