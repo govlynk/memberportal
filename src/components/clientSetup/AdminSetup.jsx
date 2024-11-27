@@ -10,6 +10,7 @@ import {
 	MenuItem,
 	Grid,
 	Divider,
+	Chip,
 	useTheme,
 } from "@mui/material";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -20,6 +21,22 @@ const ACCESS_LEVELS = {
 	MANAGER: "Company Manager",
 	MEMBER: "Company Member",
 };
+
+const COMPANY_ROLES = [
+	{ id: "Executive", name: "Executive" },
+	{ id: "Sales", name: "Sales" },
+	{ id: "Marketing", name: "Marketing" },
+	{ id: "Finance", name: "Finance" },
+	{ id: "Risk", name: "Risk" },
+	{ id: "Technology", name: "Technology" },
+	{ id: "Engineering", name: "Engineering" },
+	{ id: "Operations", name: "Operations" },
+	{ id: "HumanResources", name: "Human Resources" },
+	{ id: "Legal", name: "Legal" },
+	{ id: "Contracting", name: "Contracting" },
+	{ id: "Servicing", name: "Servicing" },
+	{ id: "Other", name: "Other" },
+];
 
 export function AdminSetup({ onSubmit, onBack, companyData }) {
 	const theme = useTheme();
@@ -39,7 +56,8 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 		workAddressZipCode: companyData?.shippingAddressZipCode || "",
 		workAddressCountryCode: companyData?.shippingAddressCountryCode || "USA",
 		notes: "",
-		accessLevel: "COMPANY_ADMIN", // Changed from role to accessLevel
+		accessLevel: "COMPANY_ADMIN",
+		roleId: "", // New field for company role
 	});
 	const [errors, setErrors] = useState({});
 
@@ -75,6 +93,7 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 		if (!formData.lastName) newErrors.lastName = "Last name is required";
 		if (!formData.contactEmail) newErrors.contactEmail = "Email is required";
 		if (!formData.accessLevel) newErrors.accessLevel = "Access level is required";
+		if (!formData.roleId) newErrors.roleId = "Company role is required";
 
 		// Basic email validation
 		if (formData.contactEmail && !/\S+@\S+\.\S+/.test(formData.contactEmail)) {
@@ -182,6 +201,16 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 								))}
 							</Select>
 						</FormControl>
+						<FormControl fullWidth error={!!errors.roleId} required>
+							<InputLabel>Company Role</InputLabel>
+							<Select name='roleId' value={formData.roleId} onChange={handleChange} label='Company Role'>
+								{COMPANY_ROLES.map((role) => (
+									<MenuItem key={role.id} value={role.id}>
+										{role.name}
+									</MenuItem>
+								))}
+							</Select>
+						</FormControl>
 						<TextField fullWidth label='Title' name='title' value={formData.title} onChange={handleChange} />
 						<TextField
 							fullWidth
@@ -245,18 +274,18 @@ export function AdminSetup({ onSubmit, onBack, companyData }) {
 						</Grid>
 					</Grid>
 				</Grid>
+
+				<Divider sx={{ my: 4 }} />
+
+				<Box sx={{ display: "flex", justifyContent: "space-between" }}>
+					<Button onClick={onBack} startIcon={<ArrowLeft />}>
+						Back
+					</Button>
+					<Button variant='contained' onClick={handleSubmit} endIcon={<ArrowRight />}>
+						Continue
+					</Button>
+				</Box>
 			</Grid>
-
-			<Divider sx={{ my: 4 }} />
-
-			<Box sx={{ display: "flex", justifyContent: "space-between" }}>
-				<Button onClick={onBack} startIcon={<ArrowLeft />}>
-					Back
-				</Button>
-				<Button variant='contained' onClick={handleSubmit} endIcon={<ArrowRight />}>
-					Continue
-				</Button>
-			</Box>
 		</Box>
 	);
 }
