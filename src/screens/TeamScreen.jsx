@@ -11,232 +11,196 @@ import {
 	TableRow,
 	Typography,
 	IconButton,
-	CircularProgress,
-	Collapse,
 	Chip,
+	CircularProgress,
+	FormControl,
+	InputLabel,
+	Select,
+	MenuItem,
+	Alert,
 } from "@mui/material";
-import { UserPlus, Edit, Trash2, ArrowLeft, ChevronDown, ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useTeamStore } from "../stores/teamStore";
-import { useUserCompanyStore } from "../stores/userCompanyStore";
-import { TeamDialog } from "../components/team/TeamDialog";
-import { TeamMemberDialog } from "../components/team/TeamMemberDialog";
+import { Edit, Trash2, UserPlus } from "lucide-react";
+import { generateClient } from "aws-amplify/data";
+import { useAuthStore } from "../stores/authStore";
+
+const client = generateClient({
+	authMode: "userPool",
+});
 
 export default function TeamScreen() {
-	const navigate = useNavigate();
-	const { teams, fetchTeams, removeTeam, loading, error } = useTeamStore();
-	const { getActiveCompany } = useUserCompanyStore();
-	const [teamDialogOpen, setTeamDialogOpen] = useState(false);
-	const [memberDialogOpen, setMemberDialogOpen] = useState(false);
-	const [editTeam, setEditTeam] = useState(null);
-	const [selectedTeam, setSelectedTeam] = useState(null);
-	const [expandedTeams, setExpandedTeams] = useState({});
-
-	const activeCompany = getActiveCompany();
+	const { user } = useAuthStore();
+	const [teams, setTeams] = useState([]);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState(null);
+	const [selectedCompany, setSelectedCompany] = useState("");
+	const [companies, setCompanies] = useState([]);
 
 	useEffect(() => {
-		if (activeCompany?.id) {
-			fetchTeams(activeCompany.id);
-		}
-		return () => {
-			const { cleanup } = useTeamStore.getState();
-			cleanup();
+		// Fetch companies for the user
+		const fetchCompanies = async () => {
+			try {
+				const response = await client.models.Company.list();
+				setCompanies(response.data);
+			} catch (err) {
+				console.error("Error fetching companies:", err);
+				setError("Failed to fetch companies");
+			}
 		};
-	}, [activeCompany?.id, fetchTeams]);
+		fetchCompanies();
+	}, []);
 
-	const handleAddTeamClick = () => {
-		setEditTeam(null);
-		setTeamDialogOpen(true);
-	};
+	useEffect(() => {
+		if (selectedCompany) {
+			setLoading(true);
+			fetchTeams(selectedCompany)
+				.then((data) => {
+					setTeams(data);
+					setLoading(false);
+				})
+				.catch((err) => {
+					console.error("Error fetching teams:", err);
+					setError("Failed to fetch teams");
+					setLoading(false);
+				});
+		}
+	}, [selectedCompany]);
 
-	const handleEditTeamClick = (team) => {
-		setEditTeam(team);
-		setTeamDialogOpen(true);
-	};
-
-	const handleDeleteTeamClick = async (teamId) => {
-		if (window.confirm("Are you sure you want to remove this team?")) {
-			await removeTeam(teamId);
+	const fetchTeams = async (companyId) => {
+		try {
+			const response = await client.models.Team.list({
+				filter: { companyId: { eq: companyId } },
+				include: {
+					members: {
+						include: {
+							contact: true,
+						},
+					},
+				},
+			});
+			return response.data;
+		} catch (err) {
+			console.error("Error fetching teams:", err);
+			throw err;
 		}
 	};
 
-	const handleAddMemberClick = (team) => {
-		setSelectedTeam(team);
-		setMemberDialogOpen(true);
+	const handleAddTeam = async () => {
+		const teamData = {
+			name: "New Team",
+			description: "Description of the new team",
+			companyId: selectedCompany,
+		};
+		try {
+			const newTeam = await addTeam(teamData);
+			setTeams([...teams, newTeam]);
+		} catch (err) {
+			console.error("Error adding team:", err);
+			setError("Failed to add team");
+		}
 	};
 
-	const toggleTeamExpanded = (teamId) => {
-		setExpandedTeams((prev) => ({
-			...prev,
-			[teamId]: !prev[teamId],
-		}));
+	const addTeam = async (teamData) => {
+		try {
+			const response = await client.models.Team.create(teamData);
+			return response;
+		} catch (err) {
+			console.error("Error adding team:", err);
+			throw err;
+		}
 	};
 
-	if (!activeCompany) {
-		return (
-			<Box sx={{ p: 3 }}>
-				<Typography color='error'>Please select a company first</Typography>
-			</Box>
-		);
-	}
+	const handleRemoveTeamMember = async (teamMemberId) => {
+		try {
+			await removeTeamMember(teamMemberId);
+			setTeams((prevTeams) =>
+				prevTeams.map((team) => ({
+					...team,
+					members: team.members.filter((member) => member.id !== teamMemberId),
+				}))
+			);
+		} catch (err) {
+			console.error("Error removing team member:", err);
+			setError("Failed to remove team member");
+		}
+	};
 
-	if (loading) {
-		return (
-			<Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
-				<CircularProgress />
-			</Box>
-		);
-	}
-
-	if (error) {
-		return <Box sx={{ p: 3, color: "error.main" }}>Error: {error}</Box>;
-	}
+	const removeTeamMember = async (teamMemberId) => {
+		try {
+			await client.models.TeamMember.delete({ id: teamMemberId });
+		} catch (err) {
+			console.error("Error removing team member:", err);
+			throw err;
+		}
+	};
 
 	return (
-		<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-			<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-				<Box>
-					<Typography variant='h4' sx={{ fontWeight: "bold" }}>
-						Teams
-					</Typography>
-					<Typography variant='subtitle1' color='text.secondary'>
-						{activeCompany.legalBusinessName}
-					</Typography>
+		<Box>
+			{error && (
+				<Alert severity='error' sx={{ mb: 3 }}>
+					{error}
+				</Alert>
+			)}
+
+			<FormControl fullWidth sx={{ mb: 3 }}>
+				<InputLabel id='company-select-label'>Select Company</InputLabel>
+				<Select
+					labelId='company-select-label'
+					value={selectedCompany}
+					label='Select Company'
+					onChange={(e) => setSelectedCompany(e.target.value)}
+				>
+					{companies.map((company) => (
+						<MenuItem key={company.id} value={company.id}>
+							{company.legalBusinessName}
+						</MenuItem>
+					))}
+				</Select>
+			</FormControl>
+
+			{loading ? (
+				<Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+					<CircularProgress />
 				</Box>
-				<Button variant='contained' startIcon={<UserPlus size={20} />} onClick={handleAddTeamClick} sx={{ px: 3 }}>
-					Add Team
-				</Button>
-			</Box>
-
-			<TableContainer component={Paper} sx={{ flex: 1 }}>
-				<Table>
-					<TableHead>
-						<TableRow>
-							<TableCell width='40px'></TableCell>
-							<TableCell>Name</TableCell>
-							<TableCell>Description</TableCell>
-							<TableCell>Members</TableCell>
-							<TableCell align='right'>Actions</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody>
-						{teams.map((team) => (
-							<React.Fragment key={team.id}>
-								<TableRow hover>
-									<TableCell>
-										<IconButton size='small' onClick={() => toggleTeamExpanded(team.id)}>
-											{expandedTeams[team.id] ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-										</IconButton>
-									</TableCell>
-									<TableCell>{team.name}</TableCell>
-									<TableCell>{team.description || "-"}</TableCell>
-									<TableCell>{team.members?.length || 0}</TableCell>
-									<TableCell align='right'>
-										<Button
-											size='small'
-											startIcon={<UserPlus size={16} />}
-											onClick={() => handleAddMemberClick(team)}
-											sx={{ mr: 1 }}
-										>
-											Add Member
-										</Button>
-										<IconButton onClick={() => handleEditTeamClick(team)} size='small' title='Edit Team'>
-											<Edit size={18} />
-										</IconButton>
-										<IconButton
-											onClick={() => handleDeleteTeamClick(team.id)}
-											size='small'
-											color='error'
-											title='Remove Team'
-										>
-											<Trash2 size={18} />
-										</IconButton>
-									</TableCell>
-								</TableRow>
-								<TableRow>
-									<TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-										<Collapse in={expandedTeams[team.id]} timeout='auto' unmountOnExit>
-											<Box sx={{ margin: 1 }}>
-												<Typography variant='h6' gutterBottom component='div'>
-													Team Members
-												</Typography>
-												<Table size='small'>
-													<TableHead>
-														<TableRow>
-															<TableCell>Name</TableCell>
-															<TableCell>Role</TableCell>
-															<TableCell>Email</TableCell>
-															<TableCell>Phone</TableCell>
-															<TableCell align='right'>Actions</TableCell>
-														</TableRow>
-													</TableHead>
-													<TableBody>
-														{team.members?.map((member) => (
-															<TableRow key={member.id}>
-																<TableCell>
-																	{member.contact.firstName} {member.contact.lastName}
-																</TableCell>
-																<TableCell>
-																	<Chip label={member.role} size='small' />
-																</TableCell>
-																<TableCell>{member.contact.contactEmail || "-"}</TableCell>
-																<TableCell>{member.contact.contactBusinessPhone || "-"}</TableCell>
-																<TableCell align='right'>
-																	<IconButton
-																		size='small'
-																		color='error'
-																		onClick={() => handleRemoveMember(member.id)}
-																	>
-																		<Trash2 size={16} />
-																	</IconButton>
-																</TableCell>
-															</TableRow>
-														))}
-														{(!team.members || team.members.length === 0) && (
-															<TableRow>
-																<TableCell colSpan={5} align='center'>
-																	No team members
-																</TableCell>
-															</TableRow>
-														)}
-													</TableBody>
-												</Table>
-											</Box>
-										</Collapse>
-									</TableCell>
-								</TableRow>
-							</React.Fragment>
-						))}
-						{teams.length === 0 && (
+			) : (
+				<TableContainer component={Paper}>
+					<Table>
+						<TableHead>
 							<TableRow>
-								<TableCell colSpan={5} align='center'>
-									No teams found
-								</TableCell>
+								<TableCell>Team Name</TableCell>
+								<TableCell>Description</TableCell>
+								<TableCell>Members</TableCell>
+								<TableCell align='right'>Actions</TableCell>
 							</TableRow>
-						)}
-					</TableBody>
-				</Table>
-			</TableContainer>
+						</TableHead>
+						<TableBody>
+							{teams.map((team) => (
+								<TableRow key={team.id} hover>
+									<TableCell>{team.name}</TableCell>
+									<TableCell>{team.description}</TableCell>
+									<TableCell>
+										{team.members.map((member) => (
+											<Chip
+												key={member.id}
+												label={`${member.contact.firstName} ${member.contact.lastName}`}
+												onDelete={() => handleRemoveTeamMember(member.id)}
+											/>
+										))}
+									</TableCell>
+									<TableCell align='right'>
+										<IconButton onClick={() => handleAddTeam()} size='small' color='primary'>
+											<UserPlus size={16} />
+										</IconButton>
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</TableContainer>
+			)}
 
-			<TeamDialog
-				open={teamDialogOpen}
-				onClose={() => {
-					setTeamDialogOpen(false);
-					setEditTeam(null);
-				}}
-				editTeam={editTeam}
-				companyId={activeCompany.id}
-			/>
-
-			<TeamMemberDialog
-				open={memberDialogOpen}
-				onClose={() => {
-					setMemberDialogOpen(false);
-					setSelectedTeam(null);
-				}}
-				team={selectedTeam}
-				companyId={activeCompany.id}
-			/>
+			<Button variant='contained' color='primary' onClick={handleAddTeam} sx={{ mt: 3 }}>
+				Add Team
+			</Button>
 		</Box>
 	);
 }
