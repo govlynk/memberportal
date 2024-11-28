@@ -18,7 +18,7 @@ export async function getOpportunity(searchParams) {
 
 	const queryString = formatQueryParams(searchParams);
 	const apiUrl = `https://api.sam.gov/opportunities/v2/search?${api_key}&${queryString}`;
-	// console.log(apiUrl);
+	console.log(apiUrl);
 
 	try {
 		const response = await axios.get(apiUrl);

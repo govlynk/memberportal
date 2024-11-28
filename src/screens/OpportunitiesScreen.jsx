@@ -1,46 +1,15 @@
 import React from "react";
 import { Box, Typography, Tabs, Tab, Alert, CircularProgress } from "@mui/material";
 import { OpportunityList } from "../components/opportunities/OpportunityList";
+import { OpportunitySearch } from "../components/opportunities/OpportunitySearch";
 import { useOpportunityStore } from "../stores/opportunityStore";
 import { useUserCompanyStore } from "../stores/userCompanyStore";
-import { useEffect } from "react";
 
 export default function OpportunitiesScreen() {
 	const [activeTab, setActiveTab] = React.useState(0);
-	const {
-		opportunities,
-		savedOpportunities,
-		rejectedOpportunities,
-		fetchOpportunities,
-		loading,
-		error,
-		lastRetrievedDate,
-	} = useOpportunityStore();
+	const { opportunities, savedOpportunities, rejectedOpportunities } = useOpportunityStore();
 	const { getActiveCompany } = useUserCompanyStore();
 	const activeCompany = getActiveCompany();
-
-	useEffect(() => {
-		if (activeCompany?.naicsCode) {
-			const NAICS = activeCompany?.naicsCode;
-			const ncode = Array.isArray(NAICS) && NAICS.length > 1 ? NAICS.join(",") : NAICS;
-			const date = new Date();
-			const endDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
-			const startDate = lastRetrievedDate
-				? new Date(lastRetrievedDate).toLocaleDateString()
-				: `${date.getMonth() - 2}/01/${date.getFullYear()}`;
-			const limit = 10;
-
-			const searchParams = {
-				ncode: `&naics=${ncode}`,
-				postedFrom: `&postedFrom=${startDate}`,
-				postedTo: `&postedTo=${endDate}`,
-				ptype: `&ptype=${["p", "o", "k"]}`,
-				limit: `&limit=${limit}`,
-			};
-
-			fetchOpportunities(searchParams);
-		}
-	}, [activeCompany?.naicsCode, fetchOpportunities, lastRetrievedDate]);
 
 	const handleTabChange = (event, newValue) => {
 		setActiveTab(newValue);
@@ -54,33 +23,13 @@ export default function OpportunitiesScreen() {
 		);
 	}
 
-	if (loading) {
-		return (
-			<Box sx={{ p: 3, display: "flex", justifyContent: "center" }}>
-				<CircularProgress />
-			</Box>
-		);
-	}
-
-	if (error) {
-		return (
-			<Box sx={{ p: 3 }}>
-				<Alert severity='error'>{error}</Alert>
-			</Box>
-		);
-	}
-
 	return (
 		<Box sx={{ p: 3 }}>
 			<Typography variant='h4' sx={{ mb: 4, fontWeight: "bold" }}>
 				Contract Opportunities
 			</Typography>
 
-			{lastRetrievedDate && (
-				<Typography variant='caption' color='text.secondary' sx={{ mb: 3, display: "block" }}>
-					Last updated: {new Date(lastRetrievedDate).toLocaleString()}
-				</Typography>
-			)}
+			<OpportunitySearch />
 
 			<Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
 				<Tab label={`New (${opportunities.length})`} id='opportunities-tab-0' />
