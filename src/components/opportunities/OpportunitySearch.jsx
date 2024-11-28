@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	Box,
 	TextField,
@@ -32,48 +32,38 @@ const PROCUREMENT_TYPES = [
 // rdlfrom	Response Deadline date. Format must be MM/dd/yyyy
 
 export function OpportunitySearch() {
+	const { searchParams, setSearchParams, fetchOpportunities, loading, error } = useOpportunityStore();
 	const { getActiveCompany } = useUserCompanyStore();
-	const { fetchOpportunities, lastRetrievedDate, loading, error } = useOpportunityStore();
 	const activeCompany = getActiveCompany();
 
-	const NAICS = activeCompany?.naicsCode;
-	const ncode = Array.isArray(NAICS) && NAICS.length > 1 ? NAICS.join(",") : NAICS;
-	const date = new Date();
-	const endDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
-	// Use last retrieved date if available, otherwise use 3 months prior
-	const startDate = lastRetrievedDate
-		? new Date(lastRetrievedDate).toLocaleDateString()
-		: `${date.getMonth() - 2}/01/${date.getFullYear()}`;
-	const limit = 10;
+	console.log(activeCompany);
+	const [selectedNaicsCodes, setSelectedNaicsCodes] = useState([]);
 
-	const [searchParams, setSearchParams] = useState({
-		ncode: `&naics=${ncode}`,
-		postedFrom: `&postedFrom=${startDate}`,
-		postedTo: `&postedTo=${endDate}`,
-		ptype: `&ptype=${["p", "o", "k"]}`,
-		limit: `&limit=${limit}`,
-	});
+	useEffect(() => {
+		if (activeCompany?.naicsCode) {
+			setSelectedNaicsCodes([activeCompany.naicsCode]);
+		}
+	}, [activeCompany]);
+
+	const handleToggleNaicsCode = (code) => {
+		setSelectedNaicsCodes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
+	};
 
 	const handleSearch = async () => {
-		if (!activeCompany?.naicsCode) {
-			return;
-		}
-
 		const params = {
 			...searchParams,
-			ncode: `&naics=${ncode}`,
-			postedFrom: `&postedFrom=${startDate}`,
-			postedTo: `&postedTo=${endDate}`,
-			ptype: `&ptype=${["p", "o", "k"]}`,
-			limit: `&limit=${limit}`,
+			ncode: selectedNaicsCodes.join(","),
+			postedFrom: searchParams.startDate,
+			postedTo: searchParams.endDate,
+			ptype: PROCUREMENT_TYPES.join(","),
+			limit: searchParams.limit,
 		};
-
 		await fetchOpportunities(params);
 	};
 
 	if (!activeCompany) {
 		return (
-			<Alert severity='warning' sx={{ mb: 3 }}>
+			<Alert severity='warning' sx={{ mt: 2 }}>
 				Please select a company to search for opportunities
 			</Alert>
 		);
@@ -88,61 +78,62 @@ export function OpportunitySearch() {
 			<Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
 				<FormControl sx={{ minWidth: 200 }}>
 					<InputLabel>NAICS Code</InputLabel>
-					<Select value={activeCompany.naicsCode || ""} label='NAICS Code' disabled>
-						<MenuItem value={activeCompany.naicsCode}>{activeCompany.naicsCode}</MenuItem>
-					</Select>
+					<Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+						{activeCompany.naicsCodes.map((code) => (
+							<Chip
+								key={code}
+								label={code}
+								color={selectedNaicsCodes.includes(code) ? "primary" : "default"}
+								onClick={() => handleToggleNaicsCode(code)}
+								clickable
+							/>
+						))}
+					</Box>
 				</FormControl>
 
 				<FormControl sx={{ minWidth: 200 }}>
-					<InputLabel>Limit</InputLabel>
-					<Select
+					<TextField
+						label='Limit'
+						type='number'
 						value={searchParams.limit}
 						onChange={(e) => setSearchParams({ ...searchParams, limit: e.target.value })}
-						label='Limit'
-					>
-						<MenuItem value={10}>10</MenuItem>
-						<MenuItem value={25}>25</MenuItem>
-						<MenuItem value={50}>50</MenuItem>
-					</Select>
+					/>
 				</FormControl>
 
 				<Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
 					{PROCUREMENT_TYPES.map((type) => (
 						<Chip
-							key={type.value}
-							label={type.label}
-							color={searchParams.ptype.includes(type.value) ? "primary" : "default"}
-							onClick={() => {
-								const newTypes = searchParams.ptype.includes(type.value)
-									? searchParams.ptype.filter((t) => t !== type.value)
-									: [...searchParams.ptype, type.value];
-								setSearchParams({ ...searchParams, ptype: newTypes });
-							}}
+							key={type}
+							label={type}
+							color={searchParams.ptype.includes(type) ? "primary" : "default"}
+							onClick={() =>
+								setSearchParams((prev) => ({
+									...prev,
+									ptype: prev.ptype.includes(type)
+										? prev.ptype.filter((t) => t !== type)
+										: [...prev.ptype, type],
+								}))
+							}
+							clickable
 						/>
 					))}
 				</Box>
-
-				<Button
-					variant='contained'
-					onClick={handleSearch}
-					disabled={loading}
-					startIcon={loading ? <RefreshCw className='animate-spin' /> : <Search />}
-					sx={{ ml: "auto" }}
-				>
-					Search Opportunities
-				</Button>
 			</Box>
+
+			<Button variant='contained' color='primary' onClick={handleSearch} sx={{ mt: 3 }}>
+				Search
+			</Button>
+
+			{loading && (
+				<Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+					<CircularProgress />
+				</Box>
+			)}
 
 			{error && (
 				<Alert severity='error' sx={{ mt: 2 }}>
 					{error}
 				</Alert>
-			)}
-
-			{lastRetrievedDate && (
-				<Typography variant='caption' color='text.secondary' sx={{ mt: 2, display: "block" }}>
-					Last retrieved: {new Date(lastRetrievedDate).toLocaleString()}
-				</Typography>
 			)}
 		</Paper>
 	);
