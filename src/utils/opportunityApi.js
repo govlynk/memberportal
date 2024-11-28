@@ -18,7 +18,7 @@ export async function getOpportunity(searchParams) {
 
 	const queryString = formatQueryParams(searchParams);
 	const apiUrl = `https://api.sam.gov/opportunities/v2/search?${api_key}&${queryString}`;
-	console.log(apiUrl);
+	// console.log(apiUrl);
 
 	try {
 		const response = await axios.get(apiUrl);
@@ -26,7 +26,7 @@ export async function getOpportunity(searchParams) {
 			throw new Error("Network response was not ok");
 		}
 		// Sanitize the data before returning
-		const sanitizedData = sanitizeData(response.data);
+		const sanitizedData = sanitizeData(response.data.opportunitiesData);
 		return sanitizedData;
 	} catch (error) {
 		// Handle errors
