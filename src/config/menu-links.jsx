@@ -1,4 +1,17 @@
-import { Home, Users, Contact2, Receipt, User, Medal, ListTodo, Building2, UserCog, Settings } from "lucide-react";
+import {
+	Home,
+	Users,
+	Contact2,
+	Receipt,
+	User,
+	Medal,
+	ListTodo,
+	Building2,
+	UserCog,
+	Settings,
+	Search,
+	Briefcase,
+} from "lucide-react";
 
 export const menuLinks = [
 	{
@@ -20,11 +33,16 @@ export const menuLinks = [
 			},
 		],
 	},
+
 	{
 		id: "profile",
 		title: "Profile",
 		icon: Users,
 		links: [
+			{
+				title: "SAM Registration",
+				path: "/sam",
+			},
 			{
 				title: "Manage Contacts",
 				path: "/contacts",
@@ -32,10 +50,6 @@ export const menuLinks = [
 			{
 				title: "Manage Team",
 				path: "/team",
-			},
-			{
-				title: "SAM Registration",
-				path: "/sam",
 			},
 		],
 	},
@@ -45,7 +59,7 @@ export const menuLinks = [
 		icon: Contact2,
 		links: [
 			{
-				title: "Opportunities",
+				title: "Contract Opportunities",
 				path: "/opportunities",
 			},
 			{

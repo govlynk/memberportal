@@ -7,27 +7,18 @@ const sanitizeData = (data) => {
 	return JSON.parse(JSON.stringify(data));
 };
 
-export async function getOpportunity(NAICS) {
+const formatQueryParams = (params) => {
+	return Object.entries(params)
+		.map(([key, value]) => `${value}`)
+		.join("&");
+};
+
+export async function getOpportunity(searchParams) {
 	const api_key = `&api_key=${import.meta.env.VITE_SAM_API_KEY}`;
 
-	// Define search parameters
-	const limit = 10; // Replace with your actual limit
-	const ptype = "p,o,k"; // Replace with your actual ptype
-	// Check if NAICS is an array and has more than one item
-	const ncode = Array.isArray(NAICS) && NAICS.length > 1 ? NAICS.join(",") : NAICS;
-
-	const date = new Date();
-	const endDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
-	const startDate = `${date.getMonth() - 1}/01/${date.getFullYear()}`;
-
-	const apiUrl =
-		"https://api.sam.gov/opportunities/v2/search?" +
-		api_key +
-		`&postedFrom=${startDate}` +
-		`&postedTo=${endDate}` +
-		`&limit=${limit}` +
-		`&ptype=${ptype}` +
-		`&naics=${ncode}`;
+	const queryString = formatQueryParams(searchParams);
+	const apiUrl = `https://api.sam.gov/opportunities/v2/search?${api_key}&${queryString}`;
+	console.log(apiUrl);
 
 	try {
 		const response = await axios.get(apiUrl);

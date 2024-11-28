@@ -9,31 +9,32 @@ import UserCompanyRoleScreen from "../../screens/UserCompanyRoleScreen";
 import ContactsScreen from "../../screens/ContactsScreen";
 import ContactAdminScreen from "../../screens/ContactAdminScreen";
 import SAMRegistrationScreen from "../../screens/SAMRegistrationScreen";
+import OpportunitiesScreen from "../../screens/OpportunitiesScreen";
 import NotFoundPage from "../../screens/NotFoundPage";
 import MainLayout from "../layout/MainLayout";
-
 import TodoScreen from "../../screens/TodoScreen";
 
 const AppRouter = ({ signOut, user }) => {
-	return (
-		<Routes>
-			<Route path='/' element={<MainLayout signOut={signOut} />}>
-				<Route index element={<TodoScreen />} />
-				<Route path='todos' element={<TodoScreen />} />
-				<Route path='user-admin' element={<UserScreen />} />
-				<Route path='company' element={<CompanyScreen />} />
-				<Route path='company/:companyId/team' element={<TeamScreen />} />
-				<Route path='team' element={<TeamScreen />} />
-				<Route path='admin' element={<AdminScreen />} />
-				<Route path='user-company-roles' element={<UserCompanyRoleScreen />} />
-				<Route path='client-setup' element={<ClienSetupScreen />} />
-				<Route path='contacts' element={<ContactsScreen />} />
-				<Route path='contact-admin' element={<ContactAdminScreen />} />
-				<Route path='sam' element={<SAMRegistrationScreen />} />
-				<Route path='*' element={<NotFoundPage />} />
-			</Route>
-		</Routes>
-	);
+  return (
+    <Routes>
+      <Route path='/' element={<MainLayout signOut={signOut} />}>
+        <Route index element={<TodoScreen />} />
+        <Route path='todos' element={<TodoScreen />} />
+        <Route path='user-admin' element={<UserScreen />} />
+        <Route path='company' element={<CompanyScreen />} />
+        <Route path='company/:companyId/team' element={<TeamScreen />} />
+        <Route path='team' element={<TeamScreen />} />
+        <Route path='admin' element={<AdminScreen />} />
+        <Route path='user-company-roles' element={<UserCompanyRoleScreen />} />
+        <Route path='client-setup' element={<ClienSetupScreen />} />
+        <Route path='contacts' element={<ContactsScreen />} />
+        <Route path='contact-admin' element={<ContactAdminScreen />} />
+        <Route path='sam' element={<SAMRegistrationScreen />} />
+        <Route path='opportunities' element={<OpportunitiesScreen />} />
+        <Route path='*' element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+  );
 };
 
 export default AppRouter;
