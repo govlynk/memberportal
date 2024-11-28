@@ -23,39 +23,54 @@ export const useTeamStore = create((set, get) => ({
 	fetchTeams: async (companyId) => {
 		if (!companyId) {
 			console.error("TeamStore: fetchTeams called without companyId");
-			set({ error: "Company ID is required", loading: false });
+			set({ error: "Company ID is required", loading: false, teams: [] });
 			return;
 		}
 
+		console.log("TeamStore: Starting fetchTeams for companyId:", companyId);
 		set({ loading: true });
 		try {
-			const response = await client.models.Team.list({
+			const { data: teams } = await client.models.Team.list({
 				filter: { companyId: { eq: companyId } },
-				include: {
-					members: {
-						include: {
-							members: true,
-						},
-					},
-				},
 			});
-			console.log("TeamStore: Successfully fetched teams:", response.data);
-			if (!response?.data) {
+
+			if (!teams) {
 				throw new Error("Failed to fetch teams");
 			}
 
-			console.log("TeamStore: Successfully fetched teams:", response.data);
+			// Fetch members for each team
+			const teamsWithMembers = await Promise.all(
+				teams.map(async (team) => {
+					const { data: members } = await client.models.TeamMember.list({
+						filter: { teamId: { eq: team.id } },
+						include: {
+							contact: true,
+						},
+					});
+					return {
+						...team,
+						members: members || [],
+					};
+				})
+			);
+
+			console.log("TeamStore: Teams with members:", teamsWithMembers);
+
 			set({
-				teams: response.data,
+				teams: teamsWithMembers,
 				loading: false,
 				error: null,
 			});
+
+			return teamsWithMembers;
 		} catch (err) {
 			console.error("TeamStore: Error fetching teams:", err);
 			set({
 				error: err.message || "Failed to fetch teams",
 				loading: false,
+				teams: [],
 			});
+			throw err;
 		}
 	},
 

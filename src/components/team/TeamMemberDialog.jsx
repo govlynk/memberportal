@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+	Alert,
 	Box,
 	Button,
 	Checkbox,
@@ -85,26 +86,39 @@ export function TeamMemberDialog({ open, onClose, team }) {
 	};
 
 	const handleSave = async () => {
+		console.log("TeamMemberDialog: Starting save with:", {
+			selectedRole,
+			selectedContactIds,
+			team,
+		});
+
 		if (!selectedRole) {
 			setError("Please select a role");
 			return;
 		}
+
 		if (selectedContactIds.length === 0) {
 			setError("Please select at least one contact");
 			return;
 		}
 
+		if (!team?.id) {
+			setError("No team selected");
+			return;
+		}
+
 		setLoading(true);
 		try {
-			await Promise.all(
-				selectedContactIds.map((contactId) =>
-					addTeamMember({
-						teamId: team.id,
-						contactId,
-						role: selectedRole,
-					})
-				)
-			);
+			for (const contactId of selectedContactIds) {
+				console.log("TeamMemberDialog: Adding member:", { contactId, role: selectedRole });
+				await addTeamMember({
+					teamId: team.id,
+					contactId,
+					role: selectedRole,
+				});
+			}
+
+			console.log("TeamMemberDialog: Successfully added all members");
 			onClose();
 		} catch (err) {
 			console.error("Error adding team members:", err);
@@ -117,10 +131,10 @@ export function TeamMemberDialog({ open, onClose, team }) {
 	return (
 		<Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
 			<DialogTitle sx={{ pb: 0 }}>
-				<Typography variant='h6' component='div'>
+				<Typography variant='h5' component='div'>
 					{`Add Members to ${team?.name || "Team"}`}
 				</Typography>
-				<Typography variant='subtitle2' color='text.secondary'>
+				<Typography variant='body2' color='text.secondary'>
 					Select contacts to add to the team
 				</Typography>
 			</DialogTitle>

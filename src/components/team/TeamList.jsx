@@ -1,25 +1,19 @@
 import React, { useState, useEffect } from "react";
 import {
 	Box,
+	Button,
 	Card,
 	CardContent,
 	CardHeader,
 	Collapse,
-	Button,
 	IconButton,
-	Table,
-	TableBody,
-	TableCell,
-	TableContainer,
-	TableHead,
-	TableRow,
-	TextField,
 	Typography,
 	Chip,
 	Alert,
-	Divider,
 	CircularProgress,
 	List,
+	TextField,
+	Divider,
 } from "@mui/material";
 import { Edit, Trash2, UserPlus, Filter, Search, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { TeamDialog } from "./TeamDialog";
@@ -36,27 +30,19 @@ export function TeamList() {
 	const [expandedTeamId, setExpandedTeamId] = useState(null);
 
 	const { teams, removeTeam, loading, error, fetchTeams } = useTeamStore();
-	const { teamMembers, removeTeamMember, loadingMember, errorMember, fetchTeamMembers } = useTeamMemberStore();
 	const { getActiveCompany } = useUserCompanyStore();
 	const activeCompany = getActiveCompany();
 
 	useEffect(() => {
-		const fetchTeamsAndMembers = async () => {
-			if (activeCompany?.id) {
-				const fetchedTeams = await fetchTeams(activeCompany.id);
-				if (Array.isArray(fetchedTeams)) {
-					for (const team of fetchedTeams) {
-						const teamMembers = await fetchTeamMembers(team.id);
-						console.log(`Team: ${team.name}`, teamMembers);
-					}
-				}
-			}
-		};
+		if (activeCompany?.id) {
+			console.log("TeamList: Fetching teams for company:", activeCompany.id);
+			fetchTeams(activeCompany.id);
+		}
+	}, [activeCompany?.id, fetchTeams]);
 
-		fetchTeamsAndMembers();
-	}, [activeCompany?.id, fetchTeams, fetchTeamMembers]);
-
-	console.log("fetchTeamMembers", teamMembers);
+	useEffect(() => {
+		console.log("TeamList: Current teams state:", teams);
+	}, [teams]);
 
 	const filteredTeams =
 		teams?.filter(
@@ -66,11 +52,13 @@ export function TeamList() {
 		) || [];
 
 	const handleEditTeam = (team) => {
+		console.log("TeamList: Editing team:", team);
 		setSelectedTeam(team);
 		setTeamDialogOpen(true);
 	};
 
 	const handleAddMembers = (team) => {
+		console.log("TeamList: Adding members to team:", team);
 		setSelectedTeam(team);
 		setMemberDialogOpen(true);
 	};
