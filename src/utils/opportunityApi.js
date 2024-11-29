@@ -34,3 +34,26 @@ export async function getOpportunity(searchParams) {
 		throw serializedError;
 	}
 }
+
+//*******************    Fetch notice   ***************** */
+export const fetchNotice = (url, setNotice) => {
+	const apiUrl = `${url}` + api_key;
+
+	axios
+		.get(apiUrl)
+		.then((response) => {
+			if (response.status === 404) {
+				//****   There was no description available
+				setNotice("No description available");
+				return;
+			}
+
+			let noticeText = convertSentenceCase(response.data.description);
+			noticeText ? setNotice(noticeText) : setNotice("empty");
+		})
+		.catch((error) => {
+			// Handle errors
+			setNotice("error");
+			console.error("There was an error fetching the notice:", error);
+		});
+};
