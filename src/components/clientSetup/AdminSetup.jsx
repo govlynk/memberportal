@@ -20,6 +20,9 @@ const ACCESS_LEVELS = {
 	COMPANY_ADMIN: "Company Administrator",
 	MANAGER: "Company Manager",
 	MEMBER: "Company Member",
+	GOVLYNK_ADMIN: "Govlynk Administrator",
+	GOVLYNK_CONSULTANT: "Govlynk Consultant",
+	GOVLYNK_USER: "Govlynk User",
 };
 
 const COMPANY_ROLES = [
