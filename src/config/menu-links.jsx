@@ -11,6 +11,8 @@ import {
 	Settings,
 	Search,
 	Briefcase,
+	DollarSign,
+	PieChart,
 } from "lucide-react";
 
 export const menuLinks = [
@@ -20,6 +22,10 @@ export const menuLinks = [
 		icon: Home,
 		links: [
 			{
+				title: "Welcome",
+				path: "/welcome",
+			},
+			{
 				title: "Dashboard",
 				path: "/dashboard",
 			},
@@ -27,22 +33,28 @@ export const menuLinks = [
 				title: "To Do",
 				path: "/todos",
 			},
-			{
-				title: "Welcome",
-				path: "/welcome",
-			},
 		],
 	},
-
 	{
 		id: "profile",
 		title: "Profile",
 		icon: Users,
 		links: [
 			{
+				title: "Readieness Assessment",
+				path: "/assessment",
+			},
+			{
 				title: "SAM Registration",
 				path: "/sam",
 			},
+		],
+	},
+	{
+		id: "Company Admin",
+		title: "Administration",
+		icon: Users,
+		links: [
 			{
 				title: "Manage Contacts",
 				path: "/contacts",
@@ -54,13 +66,17 @@ export const menuLinks = [
 		],
 	},
 	{
-		id: "leads",
-		title: "Leads",
-		icon: Contact2,
+		id: "market",
+		title: "Market Intelligence",
+		icon: PieChart,
 		links: [
 			{
 				title: "Contract Opportunities",
 				path: "/opportunities",
+			},
+			{
+				title: "Spending Analysis",
+				path: "/spending-analysis",
 			},
 			{
 				title: "Pipeline",
