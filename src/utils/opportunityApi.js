@@ -13,6 +13,15 @@ const formatQueryParams = (params) => {
 		.join("&");
 };
 
+const processOpportunityData = (opportunity) => {
+	return {
+		...opportunity,
+		department: opportunity.department?.name || opportunity.departmentName || "N/A",
+		subtier: opportunity.subtierAgency?.name || opportunity.subtierAgencyName || "N/A",
+		office: opportunity.office?.name || opportunity.officeName || "N/A",
+	};
+};
+
 export async function getOpportunity(searchParams) {
 	const api_key = `&api_key=${import.meta.env.VITE_SAM_API_KEY}`;
 
@@ -25,8 +34,12 @@ export async function getOpportunity(searchParams) {
 		if (response.status !== 200) {
 			throw new Error("Network response was not ok");
 		}
-		// Sanitize the data before returning
-		const sanitizedData = sanitizeData(response.data.opportunitiesData);
+
+		// Process each opportunity to ensure department, subtier, and office info is available
+		const processedData = response.data.opportunitiesData.map(processOpportunityData);
+
+		// Sanitize the processed data before returning
+		const sanitizedData = sanitizeData(processedData);
 		return sanitizedData;
 	} catch (error) {
 		// Handle errors

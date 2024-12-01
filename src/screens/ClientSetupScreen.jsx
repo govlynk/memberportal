@@ -47,6 +47,16 @@ export default function ClientSetupScreen() {
 		setActiveStep((prev) => prev - 1);
 	};
 
+	const handleSetupComplete = () => {
+		// Reset the form and return to first step
+		setSetupData({
+			company: null,
+			user: null,
+			team: null,
+		});
+		setActiveStep(0);
+	};
+
 	const renderStepContent = () => {
 		switch (activeStep) {
 			case 0:
@@ -56,7 +66,7 @@ export default function ClientSetupScreen() {
 			case 2:
 				return <TeamSetupScreen onSubmit={handleTeamSetup} onBack={handleBack} setupData={setupData} />;
 			case 3:
-				return <SetupReview setupData={setupData} onBack={handleBack} />;
+				return <SetupReview setupData={setupData} onBack={handleBack} onComplete={handleSetupComplete} />;
 			default:
 				return null;
 		}

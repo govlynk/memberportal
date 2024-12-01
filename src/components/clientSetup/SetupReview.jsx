@@ -10,7 +10,7 @@ import { useAuthStore } from "../../stores/authStore";
 
 const client = generateClient();
 
-export function SetupReview({ setupData, onBack }) {
+export function SetupReview({ setupData, onBack, onComplete }) {
 	const theme = useTheme();
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
@@ -183,6 +183,9 @@ export function SetupReview({ setupData, onBack }) {
 			console.log("User-company role created:", userCompanyRole);
 
 			setSuccess(true);
+			if (onComplete) {
+				onComplete();
+			}
 		} catch (err) {
 			console.error("Setup error:", err);
 			setError(err.message || "Failed to complete setup");
@@ -256,14 +259,14 @@ export function SetupReview({ setupData, onBack }) {
 			)}
 
 			<Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
-				<Button variant='outlined' startIcon={<ArrowLeft />} onClick={onBack}>
+				<Button variant='outlined' startIcon={<ArrowLeft />} onClick={onBack} disabled={loading}>
 					Back
 				</Button>
 				<Button
 					variant='contained'
 					endIcon={loading ? <CircularProgress size={20} /> : <Check />}
 					onClick={handleSetup}
-					disabled={loading}
+					disabled={loading || success}
 				>
 					{loading ? "Setting up..." : "Complete Setup"}
 				</Button>

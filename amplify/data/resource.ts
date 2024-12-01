@@ -155,6 +155,8 @@ const schema = a.schema({
 			position: a.integer().required(),
 			assigneeId: a.string(),
 			assignee: a.belongsTo("User", "assigneeId"),
+			teamId: a.string().required(),
+			team: a.belongsTo("Team", "teamId"),
 		})
 		.authorization((allow) => [allow.owner(), allow.group("Admin").to(["create", "read", "update", "delete"])]),
 });

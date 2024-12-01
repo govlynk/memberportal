@@ -3,18 +3,6 @@ import { generateClient } from "aws-amplify/data";
 
 const client = generateClient();
 
-// Schema Documentation
-/**
- * Team Schema:
- * - id: string (required)
- * - name: string (required)
- * - description: string (optional)
- * - companyId: string (required)
- * - members: TeamMember[] (optional)
- * - createdAt: string (auto-generated)
- * - updatedAt: string (auto-generated)
- */
-
 export const useTeamStore = create((set, get) => ({
 	teams: [],
 	loading: false,
@@ -22,8 +10,11 @@ export const useTeamStore = create((set, get) => ({
 
 	fetchTeams: async (companyId) => {
 		if (!companyId) {
-			console.error("TeamStore: fetchTeams called without companyId");
-			set({ error: "Company ID is required", loading: false, teams: [] });
+			set({
+				teams: [],
+				loading: false,
+				error: "Company ID is required",
+			});
 			return;
 		}
 
@@ -86,12 +77,6 @@ export const useTeamStore = create((set, get) => ({
 			throw new Error("Team name is required");
 		}
 
-		// Validate against old schema format
-		if ("role" in teamData || "contactId" in teamData) {
-			console.error("TeamStore: Detected deprecated schema fields in team data", teamData);
-			throw new Error("Invalid team data format: Contains deprecated fields");
-		}
-
 		set({ loading: true });
 		try {
 			const response = await client.models.Team.create({
@@ -99,7 +84,7 @@ export const useTeamStore = create((set, get) => ({
 				description: teamData.description?.trim() || null,
 				companyId: teamData.companyId,
 			});
-			console.log("TeamStore: Successfully created team:", response);
+
 			if (!response?.data) {
 				throw new Error("Failed to create team");
 			}
@@ -126,12 +111,6 @@ export const useTeamStore = create((set, get) => ({
 		if (!id) {
 			console.error("TeamStore: updateTeam called without id");
 			throw new Error("Team ID is required");
-		}
-
-		// Validate against old schema format
-		if ("role" in teamData || "contactId" in teamData) {
-			console.error("TeamStore: Detected deprecated schema fields in update data", teamData);
-			throw new Error("Invalid team data format: Contains deprecated fields");
 		}
 
 		set({ loading: true });
